@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: civicsignal_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-civicuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-civicpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-civicsignal}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_postgres.sql:/docker-entrypoint-initdb.d/init_postgres.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U civicuser -d civicsignal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: civicsignal_backend
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql://civicuser:civicpassword@db:5432/civicsignal
+      DATABASE_READONLY_URL: postgresql://civic_readonly:readonlypassword@db:5432/civicsignal
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL_NAME: ${GROQ_MODEL_NAME:-llama-3.3-70b-versatile}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-civicsignal-local-secret-key-2026}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./ml:/ml
+      - ./data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

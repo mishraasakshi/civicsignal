@@ -1,0 +1,58 @@
+name: CivicSignal CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: civicuser
+          POSTGRES_PASSWORD: civicpassword
+          POSTGRES_DB: civicsignal
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black
+          pip install -r backend/requirements.txt
+
+      - name: Lint and Format check with Ruff
+        run: |
+          ruff check .
+          black --check .
+
+      - name: Run Backend Pytest Suite
+        env:
+          DATABASE_URL: postgresql://civicuser:civicpassword@localhost:5432/civicsignal
+          DATABASE_READONLY_URL: postgresql://civicuser:civicpassword@localhost:5432/civicsignal
+          GROQ_API_KEY: mock_key_for_ci
+          GROQ_MODEL_NAME: llama-3.3-70b-versatile
+          JWT_SECRET_KEY: ci-test-secret-key-32-characters-long
+          ENVIRONMENT: test
+        run: |
+          pytest -v backend/tests/
