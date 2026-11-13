@@ -19,3 +19,14 @@
 ## Intended use
 - Training and validation of the category classifier
 - Final test set will be REAL Amity complaints (Google Form), never synthetic
+
+## Labelling rules (category = which team fixes it)
+- Geyser, water heater, water cooler, switches -> electrical
+- Tap, pipe, flush, drain, no water supply, leaks -> water_plumbing
+- Insects or hair IN the food, taste, stale food -> mess_food
+- Insects or dirt on tables, floors, counters -> cleanliness
+- Broken lock, missing guard, CCTV, strangers -> security
+- Broken cupboard, door hinge, chair, bed -> furniture
+- LAN port, router, portal, login -> internet_wifi
+- Parking, transport, library hours, health centre staff -> other
+- Two problems in one complaint -> the more urgent one
