@@ -1,0 +1,99 @@
+{
+  "model": "tfidf_char + logistic_regression",
+  "features": "char",
+  "data": "data/processed/complaints_v1.csv",
+  "trained_at": "2026-11-13T14:55:40+00:00",
+  "seed": 42,
+  "n_train": 1132,
+  "n_val": 284,
+  "accuracy": 0.9718,
+  "macro_f1": 0.9716,
+  "accuracy_by_source": {
+    "gpt-oss-120b": 0.9879,
+    "gpt-oss-20b": 1.0,
+    "qwen3.8-27b": 0.9469
+  },
+  "n_mistakes": 8,
+  "top_words": {
+    "cleanliness": [
+      " cle",
+      "clea",
+      "cle",
+      " clea",
+      "lean",
+      "clean",
+      "ean",
+      "dust"
+    ],
+    "electrical": [
+      " lig",
+      "lig",
+      "light",
+      "ligh",
+      " ligh",
+      "fan",
+      " fan",
+      " fan "
+    ],
+    "furniture": [
+      "air",
+      " leg",
+      "leg",
+      "chair",
+      "air ",
+      " chai",
+      "chai",
+      "brok"
+    ],
+    "internet_wifi": [
+      "fi ",
+      "wif",
+      " wif",
+      "wifi",
+      " wifi",
+      "ifi ",
+      "wifi ",
+      "ifi"
+    ],
+    "mess_food": [
+      "mess ",
+      " mess",
+      "mess",
+      " mes",
+      "da",
+      " me",
+      "mes",
+      "rot"
+    ],
+    "other": [
+      "hutt",
+      "shutt",
+      "huttl",
+      "uttl",
+      "utt",
+      " sh",
+      " shut",
+      " shu"
+    ],
+    "security": [
+      " lock",
+      " loc",
+      " gu",
+      "guar",
+      "gua",
+      "uard",
+      "guard",
+      "uar"
+    ],
+    "water_plumbing": [
+      " leak",
+      "leak",
+      " lea",
+      "eak",
+      " wate",
+      "wate",
+      "water",
+      "ater "
+    ]
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "model": "tfidf_word + logistic_regression",
+  "features": "word",
+  "data": "data/processed/complaints_v1.csv",
+  "trained_at": "2026-11-13T14:55:38+00:00",
+  "seed": 42,
+  "n_train": 1132,
+  "n_val": 284,
+  "accuracy": 0.9683,
+  "macro_f1": 0.9678,
+  "accuracy_by_source": {
+    "gpt-oss-120b": 0.9818,
+    "gpt-oss-20b": 1.0,
+    "qwen3.8-27b": 0.9469
+  },
+  "n_mistakes": 9,
+  "top_words": {
+    "cleanliness": [
+      "floor",
+      "dust",
+      "trash",
+      "everywhere",
+      "clean",
+      "garbage",
+      "cleaning",
+      "dirty"
+    ],
+    "electrical": [
+      "lights",
+      "power",
+      "fan",
+      "flickering",
+      "light",
+      "lights in",
+      "no power",
+      "flicker"
+    ],
+    "furniture": [
+      "broken",
+      "chair",
+      "leg",
+      "desk",
+      "bench",
+      "sit",
+      "toot",
+      "chair in"
+    ],
+    "internet_wifi": [
+      "wifi",
+      "portal",
+      "down",
+      "slow",
+      "load",
+      "access",
+      "wifi down",
+      "wifi in"
+    ],
+    "mess_food": [
+      "mess",
+      "was",
+      "food",
+      "cold",
+      "today",
+      "stale",
+      "dal",
+      "roti"
+    ],
+    "other": [
+      "shuttle",
+      "bus",
+      "for",
+      "late",
+      "shuttle bus",
+      "students",
+      "exam",
+      "no"
+    ],
+    "security": [
+      "guard",
+      "security",
+      "lock",
+      "gate",
+      "night",
+      "cctv",
+      "door",
+      "entrance"
+    ],
+    "water_plumbing": [
+      "water",
+      "leak",
+      "leaking",
+      "toilet",
+      "pipe",
+      "tap",
+      "floor",
+      "sink"
+    ]
+  }
+}

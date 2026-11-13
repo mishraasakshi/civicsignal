@@ -24,23 +24,42 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
 from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import FeatureUnion, Pipeline
 
 SEED = 42
 
 
-def build_pipeline() -> Pipeline:
+def word_vectorizer() -> TfidfVectorizer:
+    return TfidfVectorizer(
+        lowercase=True,
+        ngram_range=(1, 2),  # single words and word pairs ("not working")
+        min_df=2,  # ignore words that appear only once
+        sublinear_tf=True,
+    )
+
+
+def char_vectorizer() -> TfidfVectorizer:
+    # Pieces of 2-5 letters inside each word: "toot", "tuta", "tooti" share "too"/"oot".
+    # Helps with typos and Hinglish spelling variations.
+    return TfidfVectorizer(
+        lowercase=True,
+        analyzer="char_wb",
+        ngram_range=(2, 5),
+        min_df=2,
+        sublinear_tf=True,
+    )
+
+
+def build_pipeline(features: str) -> Pipeline:
+    if features == "word":
+        vec = word_vectorizer()
+    elif features == "char":
+        vec = char_vectorizer()
+    else:  # both
+        vec = FeatureUnion([("word", word_vectorizer()), ("char", char_vectorizer())])
     return Pipeline(
         [
-            (
-                "tfidf",
-                TfidfVectorizer(
-                    lowercase=True,
-                    ngram_range=(1, 2),  # single words and word pairs ("not working")
-                    min_df=2,  # ignore words that appear only once
-                    sublinear_tf=True,
-                ),
-            ),
+            ("tfidf", vec),
             ("clf", LogisticRegression(max_iter=2000, class_weight="balanced", random_state=SEED)),
         ]
     )
@@ -61,6 +80,12 @@ def main() -> None:
     parser.add_argument("--data", default="data/processed/complaints_v1.csv")
     parser.add_argument("--out-dir", default="ml/artifacts")
     parser.add_argument("--val-size", type=float, default=0.2)
+    parser.add_argument(
+        "--features",
+        choices=["word", "char", "both"],
+        default="word",
+        help="word = whole words (baseline), char = letter pieces, both = combined",
+    )
     args = parser.parse_args()
 
     df = pd.read_csv(args.data)
@@ -72,7 +97,8 @@ def main() -> None:
     )
     print(f"Train: {len(train_df)}  |  Validation: {len(val_df)}\n")
 
-    pipe = build_pipeline()
+    print(f"Features: {args.features}")
+    pipe = build_pipeline(args.features)
     pipe.fit(train_df["text"], train_df["category"])
 
     pred = pipe.predict(val_df["text"])
@@ -91,10 +117,12 @@ def main() -> None:
     print("Confusion matrix (rows = true, columns = predicted):")
     print(pd.DataFrame(cm, index=labels, columns=[l[:6] for l in labels]).to_string())
 
+    by_source = {}
     if "source_model" in val_df.columns:
         print("\nAccuracy by generator model (validation):")
         val_eval = val_df.assign(correct=(pred == val_df["category"].to_numpy()))
         for src, grp in val_eval.groupby("source_model"):
+            by_source[src] = round(float(grp["correct"].mean()), 4)
             print(f"  {src:15s} {grp['correct'].mean():.3f}  (n={len(grp)})")
 
     words = top_words(pipe)
@@ -110,9 +138,11 @@ def main() -> None:
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    joblib.dump(pipe, out_dir / "tfidf_baseline.joblib")
+    name = "tfidf_baseline" if args.features == "word" else f"tfidf_{args.features}"
+    joblib.dump(pipe, out_dir / f"{name}.joblib")
     metrics = {
-        "model": "tfidf_word_1-2gram + logistic_regression",
+        "model": f"tfidf_{args.features} + logistic_regression",
+        "features": args.features,
         "data": args.data,
         "trained_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "seed": SEED,
@@ -120,11 +150,17 @@ def main() -> None:
         "n_val": len(val_df),
         "accuracy": round(acc, 4),
         "macro_f1": round(macro_f1, 4),
+        "accuracy_by_source": by_source,
+        "n_mistakes": int(len(wrong)),
         "top_words": words,
     }
-    (out_dir / "tfidf_baseline_metrics.json").write_text(json.dumps(metrics, indent=2))
-    print(f"\nSaved model   -> {out_dir / 'tfidf_baseline.joblib'}")
-    print(f"Saved metrics -> {out_dir / 'tfidf_baseline_metrics.json'}")
+    (out_dir / f"{name}_metrics.json").write_text(json.dumps(metrics, indent=2))
+    print(f"\nSaved model   -> {out_dir / (name + '.joblib')}")
+    print(f"Saved metrics -> {out_dir / (name + '_metrics.json')}")
+    print(
+        f"\nSUMMARY [{args.features}]  accuracy={acc:.3f}  macro_f1={macro_f1:.3f}  "
+        f"mistakes={len(wrong)}  by_source={by_source}"
+    )
 
 
 if __name__ == "__main__":

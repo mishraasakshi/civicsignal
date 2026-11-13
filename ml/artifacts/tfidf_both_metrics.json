@@ -1,0 +1,99 @@
+{
+  "model": "tfidf_both + logistic_regression",
+  "features": "both",
+  "data": "data/processed/complaints_v1.csv",
+  "trained_at": "2026-11-13T14:55:41+00:00",
+  "seed": 42,
+  "n_train": 1132,
+  "n_val": 284,
+  "accuracy": 0.9718,
+  "macro_f1": 0.9717,
+  "accuracy_by_source": {
+    "gpt-oss-120b": 0.9879,
+    "gpt-oss-20b": 1.0,
+    "qwen3.8-27b": 0.9469
+  },
+  "n_mistakes": 8,
+  "top_words": {
+    "cleanliness": [
+      "word__floor",
+      "word__trash",
+      "word__dust",
+      "word__clean",
+      "word__garbage",
+      "word__everywhere",
+      "char__ cle",
+      "char__clea"
+    ],
+    "electrical": [
+      "word__lights",
+      "word__power",
+      "word__fan",
+      "word__flickering",
+      "char__ lig",
+      "char__lig",
+      "char__ ligh",
+      "char__light"
+    ],
+    "furniture": [
+      "word__broken",
+      "word__chair",
+      "word__leg",
+      "word__desk",
+      "word__bench",
+      "word__sit",
+      "char__air",
+      "word__toot"
+    ],
+    "internet_wifi": [
+      "word__wifi",
+      "word__portal",
+      "char__fi ",
+      "char__wif",
+      "char__wifi",
+      "char__ wifi",
+      "char__ wif",
+      "char__ifi "
+    ],
+    "mess_food": [
+      "word__mess",
+      "word__was",
+      "word__cold",
+      "word__food",
+      "word__stale",
+      "word__dal",
+      "word__today",
+      "word__roti"
+    ],
+    "other": [
+      "word__shuttle",
+      "word__for",
+      "word__bus",
+      "word__shuttle bus",
+      "word__late",
+      "word__exam",
+      "word__no",
+      "word__students"
+    ],
+    "security": [
+      "word__lock",
+      "word__guard",
+      "word__security",
+      "word__gate",
+      "word__cctv",
+      "word__door",
+      "word__night",
+      "char__ lock"
+    ],
+    "water_plumbing": [
+      "word__water",
+      "word__toilet",
+      "word__tap",
+      "word__leak",
+      "word__leaking",
+      "word__pipe",
+      "char__leak",
+      "char__ leak"
+    ]
+  }
+}
