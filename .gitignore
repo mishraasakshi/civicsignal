@@ -75,3 +75,7 @@ frontend/coverage/
 
 # Docker
 .docker/
+
+# Embedding model download + cached embeddings (large)
+ml/.hf_cache/
+ml/artifacts/emb_cache/
