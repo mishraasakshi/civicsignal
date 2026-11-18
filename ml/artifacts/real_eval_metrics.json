@@ -1,0 +1,62 @@
+{
+  "data": "data/processed/real_test_v1.csv",
+  "evaluated_at": "2026-11-18T16:19:25+00:00",
+  "human_baseline_real_only": {
+    "n": 58,
+    "accuracy": 0.8448,
+    "macro_f1": 0.7958
+  },
+  "models": {
+    "word": {
+      "all": {
+        "n": 98,
+        "accuracy": 0.6735,
+        "macro_f1": 0.6111
+      },
+      "real_only": {
+        "n": 58,
+        "accuracy": 0.5517,
+        "macro_f1": 0.4878
+      },
+      "pasted": {
+        "n": 40,
+        "accuracy": 0.85,
+        "macro_f1": 0.7462
+      }
+    },
+    "char": {
+      "all": {
+        "n": 98,
+        "accuracy": 0.6735,
+        "macro_f1": 0.6455
+      },
+      "real_only": {
+        "n": 58,
+        "accuracy": 0.5517,
+        "macro_f1": 0.514
+      },
+      "pasted": {
+        "n": 40,
+        "accuracy": 0.85,
+        "macro_f1": 0.6512
+      }
+    },
+    "both": {
+      "all": {
+        "n": 98,
+        "accuracy": 0.6224,
+        "macro_f1": 0.6262
+      },
+      "real_only": {
+        "n": 58,
+        "accuracy": 0.4655,
+        "macro_f1": 0.4639
+      },
+      "pasted": {
+        "n": 40,
+        "accuracy": 0.85,
+        "macro_f1": 0.7564
+      }
+    }
+  }
+}

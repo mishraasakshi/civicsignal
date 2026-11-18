@@ -30,3 +30,4 @@
 - LAN port, router, portal, login -> internet_wifi
 - Parking, transport, library hours, health centre staff -> other
 - Two problems in one complaint -> the more urgent one
+- Water cooler: not cooling -> electrical; no water or leaking -> water_plumbing; dirty or insects -> cleanliness
