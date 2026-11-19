@@ -2,18 +2,27 @@ name: CivicSignal CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  backend-tests:
+  backend:
+    name: Backend - lint, tests, database permissions
     runs-on: ubuntu-latest
 
     services:
       postgres:
         image: postgres:16-alpine
         env:
+          # Throwaway database that only exists while this CI job runs
           POSTGRES_USER: civicuser
           POSTGRES_PASSWORD: civicpassword
           POSTGRES_DB: civicsignal
@@ -21,38 +30,79 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
+
+    env:
+      # "development": CI uses throwaway passwords, so the production safety check only warns here
+      ENVIRONMENT: development
+      JWT_SECRET_KEY: ci-only-secret-not-used-anywhere-else-0123456789
+      DATABASE_URL: postgresql://civicuser:civicpassword@localhost:5432/civicsignal
+      DATABASE_READONLY_URL: postgresql://civic_readonly:readonlypassword@localhost:5432/civicsignal
+      GROQ_API_KEY: ""
 
     steps:
-      - name: Checkout repository
+      - name: Check out the code
         uses: actions/checkout@v4
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
 
-      - name: Install dependencies
+      - name: Install dependencies (CPU-only PyTorch keeps this fast)
         run: |
           python -m pip install --upgrade pip
-          pip install ruff black
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r backend/requirements.txt
+          pip install ruff==0.17.5 black==25.11.0
 
-      - name: Lint and Format check with Ruff
-        run: |
-          ruff check .
-          black --check .
+      - name: Lint (ruff)
+        run: ruff check .
 
-      - name: Run Backend Pytest Suite
+      - name: Format (black)
+        run: black --check .
+
+      - name: Backend tests (pytest)
+        run: pytest backend -q
+
+      - name: Migrations + read-only role permissions on real Postgres
         env:
-          DATABASE_URL: postgresql://civicuser:civicpassword@localhost:5432/civicsignal
-          DATABASE_READONLY_URL: postgresql://civicuser:civicpassword@localhost:5432/civicsignal
-          GROQ_API_KEY: mock_key_for_ci
-          GROQ_MODEL_NAME: llama-3.3-70b-versatile
-          JWT_SECRET_KEY: ci-test-secret-key-32-characters-long
-          ENVIRONMENT: test
+          PGPASSWORD: civicpassword
         run: |
-          pytest -v backend/tests/
+          psql -h localhost -U civicuser -d civicsignal -v ON_ERROR_STOP=1 -f scripts/init_postgres.sql
+          alembic -c backend/alembic.ini upgrade head
+          python backend/scripts/check_readonly_role.py
+
+  frontend:
+    name: Frontend - lint, tests, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Tests (Vitest)
+        run: npm test
+
+      - name: Production build (TypeScript + Vite)
+        run: npm run build

@@ -3,7 +3,7 @@ from __future__ import annotations
 from app.core.config import settings
 from app.core.production_checks import enforce
 from app.core.security_headers import SecurityHeadersMiddleware
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -70,7 +70,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             f"{field}: {err.get('msg', 'invalid')}" if field else err.get("msg", "invalid")
         )
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=422,  # Unprocessable Content (the named constant changed between versions)
         content={
             "error": {
                 "code": "VALIDATION_ERROR",
