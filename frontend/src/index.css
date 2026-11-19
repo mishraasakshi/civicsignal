@@ -1788,3 +1788,20 @@ body:has(.landing) {
       'show';
   }
 }
+
+/* Example complaint card: straight (no tilt) and exactly as wide as the paragraph above it */
+.showcase {
+  transform: none;
+  width: 100%;
+  max-width: 34rem;
+  justify-self: start;
+  padding: 1.1rem 1.25rem;
+}
+
+.showcase .demo-result {
+  gap: 0.75rem;
+}
+
+.showcase .demo-steps {
+  gap: 0.5rem;
+}
