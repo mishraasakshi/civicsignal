@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import * as api from '../api'
 import { AuthContext } from './context'
 
@@ -25,20 +25,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(api.SESSION_EXPIRED_EVENT, onExpired)
   }, [])
 
-  async function login(email: string, password: string) {
+  const [notice, setNotice] = useState<string | null>(null)
+
+  async function signIn(email: string, password: string) {
     await api.login(email, password)
     setUser(await api.fetchMe())
   }
 
+  async function login(email: string, password: string) {
+    await signIn(email, password)
+    setNotice('Logged in successfully. Welcome back!')
+  }
+
   async function register(email: string, password: string) {
     await api.register(email, password)
-    await login(email, password) // sign up, then log straight in
+    await signIn(email, password) // sign up, then log straight in
+    setNotice("Your account is ready and you're logged in.")
   }
 
   function logout() {
     api.tokenStore.clear()
     setUser(null)
+    setNotice(null)
   }
 
-  return <AuthContext value={{ user, loading, login, register, logout }}>{children}</AuthContext>
+  const clearNotice = useCallback(() => setNotice(null), []) // stable, so the toast timer isn't restarted
+
+  return (
+    <AuthContext value={{ user, loading, login, register, logout, notice, clearNotice }}>{children}</AuthContext>
+  )
 }

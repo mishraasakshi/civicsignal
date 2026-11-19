@@ -1,11 +1,12 @@
 import { useAuth } from './auth/context'
 import { Logo } from './components/Logo'
+import { Toast } from './components/Toast'
 import { LoginPage } from './pages/LoginPage'
 import { StudentHome } from './pages/StudentHome'
 import { SupervisorDashboard } from './pages/SupervisorDashboard'
 
 function App() {
-  const { user, loading, logout } = useAuth()
+  const { user, loading, logout, notice, clearNotice } = useAuth()
 
   if (loading) return <p className="center-note">Loading…</p>
   if (!user) return <LoginPage />
@@ -14,6 +15,7 @@ function App() {
 
   return (
     <div className="app">
+      {notice && <Toast message={notice} onClose={clearNotice} />}
       <header className="topbar">
         <div className="brand small">
           <Logo size={26} />
