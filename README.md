@@ -92,6 +92,33 @@ civicsignal/
 
 ---
 
+## Run Locally
+
+You need three things running, each in its own terminal tab:
+
+```bash
+docker compose up -d db          # 1. Postgres (once; keeps running in the background)
+./scripts/dev_backend.sh         # 2. API on http://localhost:8000 (docs: /docs)
+./scripts/dev_frontend.sh        # 3. Website on http://localhost:5173
+```
+
+First-time setup:
+
+```bash
+cp .env.example .env                                         # then fill in the values
+backend/venv/bin/alembic -c backend/alembic.ini upgrade head # create / update tables
+backend/venv/bin/python backend/scripts/create_supervisor.py --email you@example.com
+cd frontend && npm install
+```
+
+Checks:
+
+```bash
+backend/venv/bin/python -m pytest backend -q                 # backend tests
+backend/venv/bin/python backend/scripts/check_readonly_role.py
+cd frontend && npm run lint && npm run build                 # frontend checks
+```
+
 ## Implementation Roadmap Checkpoints
 
 - [x] **Phase 0 — Setup**: Repository scaffolding, docker-compose, pre-commit config, CI workflow, baseline tests.
