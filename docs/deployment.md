@@ -25,7 +25,7 @@ gives each visitor's real IP to the rate limiter.
 
 ## 1. Database (Neon)
 
-1. Create a project (region: AWS us-east-1, next to Azure `eastus`).
+1. Create a project (any region; ours is AWS us-east-1).
 2. In Neon's SQL editor, create the read-only role used by the future NL-to-SQL feature
    (no password needed here - the next step sets one):
 
@@ -58,13 +58,17 @@ gives each visitor's real IP to the rate limiter.
 
 ## 3. Deploy
 
+Azure for Students subscriptions may only deploy to a few regions (`az policy assignment list`
+shows them). The script uses **East Asia** (Hong Kong): allowed, runs Container Apps, and close
+to students in India. Override with `LOCATION=<region> ./scripts/deploy_azure.sh`.
+
 ```bash
 ./scripts/deploy_azure.sh
 ```
 
 The first run creates the resource group `civicsignal-rg`, a private container registry and the
 Container Apps environment, then builds the image in Azure (about 10-15 minutes the first time)
-and starts the app at `https://civicsignal.<environment-domain>.eastus.azurecontainerapps.io`.
+and starts the app at `https://civicsignal.<environment-domain>.eastasia.azurecontainerapps.io`.
 Run the same command again to ship a new version.
 
 The container refuses to start if any secret is weak or missing (see

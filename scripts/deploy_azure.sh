@@ -12,7 +12,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SECRETS_FILE="${SECRETS_FILE:-$HOME/.civicsignal/prod-secrets.env}"
-LOCATION="${LOCATION:-eastus}" # Virginia - next to the Neon database (AWS us-east-1)
+# Azure for Students only allows a few regions (see: az policy assignment list).
+# East Asia (Hong Kong) is the closest allowed region to India that runs Container Apps.
+LOCATION="${LOCATION:-eastasia}"
 RG=civicsignal-rg
 ENVIRONMENT=civicsignal-env
 APP=civicsignal
@@ -34,7 +36,7 @@ az extension add --name containerapp --upgrade --only-show-errors -o none
 for P in Microsoft.App Microsoft.ContainerRegistry Microsoft.OperationalInsights; do
   az provider register --namespace "$P" --wait -o none
 done
-az group create -n "$RG" -l "$LOCATION" -o none
+az group show -n "$RG" -o none 2>/dev/null || az group create -n "$RG" -l "$LOCATION" -o none
 az acr show -n "$ACR" -o none 2>/dev/null ||
   az acr create -n "$ACR" -g "$RG" -l "$LOCATION" --sku Basic -o none
 az containerapp env show -n "$ENVIRONMENT" -g "$RG" -o none 2>/dev/null ||
