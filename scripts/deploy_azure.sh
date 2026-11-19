@@ -16,7 +16,8 @@ SECRETS_FILE="${SECRETS_FILE:-$HOME/.civicsignal/prod-secrets.env}"
 # East Asia (Hong Kong) is the closest allowed region to India that runs Container Apps.
 LOCATION="${LOCATION:-eastasia}"
 RG=civicsignal-rg
-ENVIRONMENT=civicsignal-env
+# Standard (workload profiles) environment: the newer 'Express' mode cannot pull private images
+ENVIRONMENT=civicsignal-std
 APP=civicsignal
 
 az account show -o none 2>/dev/null || { echo "Not signed in to Azure - run: az login"; exit 1; }
@@ -42,7 +43,7 @@ az acr show -n "$ACR" -o none 2>/dev/null ||
   az acr create -n "$ACR" -g "$RG" -l "$LOCATION" --sku Basic -o none
 az containerapp env show -n "$ENVIRONMENT" -g "$RG" -o none 2>/dev/null ||
   az containerapp env create -n "$ENVIRONMENT" -g "$RG" -l "$LOCATION" \
-    --logs-destination none -o none
+    --environment-mode WorkloadProfiles --logs-destination none -o none
 
 echo "2/5 Making the clean build folder..."
 WORK="$(mktemp -d)"
@@ -77,8 +78,8 @@ ENV_VARS=(
   "JWT_SECRET_KEY=secretref:jwt-secret-key"
   "CORS_ORIGINS=[\"$APP_URL\"]"
 )
-# Express environments cannot pull with a managed identity, so the app uses the registry's
-# own credentials (stored by Container Apps as a secret; never printed)
+# The app pulls with the registry's own credentials (stored by Container Apps as a secret;
+# never printed)
 az acr update -n "$ACR" --admin-enabled true -o none
 ACR_USER="$(az acr credential show -n "$ACR" --query username -o tsv)"
 ACR_PASS="$(az acr credential show -n "$ACR" --query 'passwords[0].value' -o tsv)"

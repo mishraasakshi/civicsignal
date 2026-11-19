@@ -78,8 +78,9 @@ The container refuses to start if any secret is weak or missing (see
 
 Settings used: 1 vCPU, 2 GiB memory, 0-1 replicas (scales to zero when idle, never more than
 one replica so the in-memory rate limiter sees every request). The registry is private; the app
-pulls from it with the registry's credentials, stored as a Container Apps secret (Express
-environments do not support managed-identity pulls).
+pulls from it with the registry's credentials, stored as a Container Apps secret. The
+environment is a standard one (`--environment-mode WorkloadProfiles`, Consumption profile):
+the newer Express mode cannot pull images from a private registry.
 
 ## 4. First-time data (run on your own computer, pointed at Neon)
 
