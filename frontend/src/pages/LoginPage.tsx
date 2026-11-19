@@ -82,14 +82,13 @@ export function LoginPage() {
             </span>
 
             <h1 id="hero-title" className="hero-title">
-              Campus problems,
-              <br />
-              <span className="hero-accent">heard and fixed.</span>
+              <span className="hero-line">Your campus. Your voice.</span>
+              <span className="hero-line hero-accent">Real problems. Real action.</span>
             </h1>
 
             <p className="hero-sub">
-              Report a broken geyser, slow Wi-Fi or bad mess food in your own words. AI sorts it to the right team,
-              and you can follow it until it’s resolved.
+              Every campus has problems. Make sure yours don’t go unheard. Share what’s wrong, and let CivicSignal
+              connect your concern to the right team.
             </p>
 
             <ul className="chips" aria-label="Highlights">

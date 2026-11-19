@@ -1805,3 +1805,24 @@ body:has(.landing) {
 .showcase .demo-steps {
   gap: 0.5rem;
 }
+
+/* Hero headline: two balanced lines, the second in the gradient */
+.hero .hero-title {
+  font-size: clamp(2rem, 3.4vw, 2.85rem);
+  line-height: 1.12;
+}
+
+.hero-line {
+  display: block;
+  text-wrap: balance;
+}
+
+.hero .hero-accent {
+  display: block;
+  padding-bottom: 0.06em; /* keeps the gradient from clipping letters like 'p' */
+}
+
+/* avoid a single word alone on the last line */
+.hero-sub {
+  text-wrap: pretty;
+}
