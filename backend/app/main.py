@@ -32,6 +32,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         401: "UNAUTHORIZED",
         403: "FORBIDDEN",
         404: "NOT_FOUND",
+        409: "CONFLICT",
         422: "VALIDATION_ERROR",
         500: "INTERNAL_SERVER_ERROR",
     }

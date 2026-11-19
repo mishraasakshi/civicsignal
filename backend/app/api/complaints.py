@@ -3,6 +3,7 @@
 POST /api/complaints        - classify with the AI and save
 GET  /api/complaints        - newest first, with optional filters
 GET  /api/complaints/{id}   - one complaint
+PATCH /api/complaints/{id}  - supervisor corrects category and/or moves status
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -13,7 +14,15 @@ from app.api.classify import classifier_dependency
 from app.db.session import get_db
 from app.ml.classifier import ComplaintClassifier
 from app.models.complaint import Complaint
-from app.schemas.complaint import Category, ComplaintCreate, ComplaintList, ComplaintOut, Status
+from app.schemas.complaint import (
+    Category,
+    ComplaintCreate,
+    ComplaintList,
+    ComplaintOut,
+    ComplaintUpdate,
+    Status,
+)
+from app.services.workflow import ALLOWED, can_move
 
 router = APIRouter(prefix="/complaints", tags=["Complaints"])
 
@@ -68,4 +77,28 @@ def get_complaint(complaint_id: int, db: Session = Depends(get_db)):
     complaint = db.get(Complaint, complaint_id)
     if complaint is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"complaint {complaint_id} not found")
+    return complaint
+
+
+@router.patch("/{complaint_id}", response_model=ComplaintOut)
+def update_complaint(complaint_id: int, body: ComplaintUpdate, db: Session = Depends(get_db)):
+    complaint = db.get(Complaint, complaint_id)
+    if complaint is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"complaint {complaint_id} not found")
+
+    if body.status is not None and not can_move(complaint.status, body.status):
+        allowed = ", ".join(sorted(ALLOWED[complaint.status])) or "none (final)"
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail=f"cannot move from '{complaint.status}' to '{body.status}'. Allowed: {allowed}",
+        )
+
+    if body.category is not None:
+        complaint.category = body.category  # predicted_category is kept, so we can measure the AI later
+        complaint.needs_review = False  # a human has looked at it
+    if body.status is not None:
+        complaint.status = body.status
+
+    db.commit()
+    db.refresh(complaint)
     return complaint

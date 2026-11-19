@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 Category = Literal["water_plumbing", "electrical", "cleanliness", "internet_wifi",
                    "furniture", "mess_food", "security", "other"]
@@ -31,6 +31,19 @@ class ComplaintCreate(BaseModel):
     def tidy_location(cls, v: str | None) -> str | None:
         v = " ".join(v.split()) if v else None
         return v or None
+
+
+class ComplaintUpdate(BaseModel):
+    """What a supervisor can change. Send one or both fields."""
+
+    category: Category | None = Field(default=None, description="correct the AI's category")
+    status: Status | None = Field(default=None, examples=["Assigned"])
+
+    @model_validator(mode="after")
+    def something_to_change(self) -> "ComplaintUpdate":
+        if self.category is None and self.status is None:
+            raise ValueError("send at least one of: category, status")
+        return self
 
 
 class ComplaintOut(BaseModel):
