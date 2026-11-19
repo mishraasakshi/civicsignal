@@ -79,3 +79,6 @@ frontend/coverage/
 # Embedding model download + cached embeddings (large)
 ml/.hf_cache/
 ml/artifacts/emb_cache/
+
+# backup copies of files
+*.bak
