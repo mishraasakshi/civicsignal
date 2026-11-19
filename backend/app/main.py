@@ -71,3 +71,10 @@ def root():
         "docs": "/docs",
         "pilot_target": "Amity University Lucknow",
     }
+
+# ---------------------------------------------------------------------------
+# Routers (Phase 5)
+# ---------------------------------------------------------------------------
+from app.api.classify import router as classify_router  # noqa: E402
+
+app.include_router(classify_router, prefix=settings.API_V1_STR)
