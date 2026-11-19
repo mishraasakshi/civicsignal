@@ -70,6 +70,7 @@ function Privacy() {
       <h3>On your device</h3>
       <ul>
         <li>After you log in, a login token is kept in your browser so you stay logged in. It expires after 24 hours, and logging out removes it.</li>
+        <li>The page's fonts are loaded from Google Fonts, so Google can see your IP address when the page loads.</li>
       </ul>
       <h3>Please don't include</h3>
       <ul>

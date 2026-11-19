@@ -97,7 +97,7 @@ export function SupervisorDashboard() {
             className={view === 'groups' ? 'tab active' : 'tab'}
             onClick={() => changeView('groups')}
           >
-            🔁 Repeated problems
+            Repeated problems
           </button>
         </div>
       </div>
@@ -108,7 +108,7 @@ export function SupervisorDashboard() {
         <>
 
       <div className="filters">
-        <span className="filters-title">🔍 Show only:</span>
+        <span className="filters-title">Show only</span>
         <label className="inline">
           Category
           <select

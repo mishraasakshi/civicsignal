@@ -78,12 +78,14 @@ export function LoginPage() {
           <div className="hero-copy">
             <span className="pill">
               <span className="pill-dot" aria-hidden="true" />
-              Powered by multilingual AI
+              Listening in English, <span lang="hi">हिंदी</span> &amp; Hinglish
             </span>
 
             <h1 id="hero-title" className="hero-title">
               <span className="hero-line">Your campus. Your voice.</span>
-              <span className="hero-line hero-accent">Real problems. Real action.</span>
+              <span className="hero-line">
+                <mark className="hero-accent">Real problems. Real action.</mark>
+              </span>
             </h1>
 
             <p className="hero-sub">
@@ -92,8 +94,8 @@ export function LoginPage() {
             </p>
 
             <ul className="chips" aria-label="Highlights">
-              <li>Sorted in seconds</li>
-              <li>English · Hindi · Hinglish</li>
+              <li>Sorted by AI in seconds</li>
+              <li>Tracked until fixed</li>
               <li>Anonymous to staff</li>
             </ul>
 
@@ -103,7 +105,13 @@ export function LoginPage() {
             <AuthCard mode={mode} onModeChange={setMode} />
           </div>
           <figure className="demo-card showcase">
-            <figcaption className="demo-label">Example complaint</figcaption>
+            <span className="stamp" aria-hidden="true">
+              Assigned
+            </span>
+            <figcaption className="demo-label">
+              <span>Example complaint</span>
+              <span className="ticket-no">No. 0042</span>
+            </figcaption>
             <blockquote className="demo-text">“B block geyser kharab hai, garam paani nahi aa raha”</blockquote>
             <div className="demo-result">
               <span className="demo-chip">Water &amp; Plumbing</span>
