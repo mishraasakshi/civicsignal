@@ -72,3 +72,9 @@ def test_logout_clears_cookie(client, make_user):
 def test_bad_cookie_is_rejected(client):
     client.cookies.set("cs_session", "not-a-real-token")
     assert client.get("/api/auth/me").status_code == 401
+
+
+def test_401_keeps_www_authenticate_header(client):
+    r = client.post("/api/auth/login", data={"username": "nobody@x.co", "password": "whatever1"})
+    assert r.status_code == 401
+    assert r.headers.get("www-authenticate") == "Bearer"

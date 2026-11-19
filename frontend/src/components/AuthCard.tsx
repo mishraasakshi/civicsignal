@@ -119,7 +119,8 @@ export function AuthCard({ mode, onModeChange }: Props) {
         setFormError('This email is already registered.')
         setAlreadyRegistered(true)
       } else if (err instanceof ApiError && err.status === 429)
-        setFormError('Too many attempts. Please wait a minute and try again.')
+        // the server says how long to wait, e.g. "...try again in about 15 minutes."
+        setFormError(err.message.charAt(0).toUpperCase() + err.message.slice(1))
       else if (err instanceof ApiError && err.status === 0) setFormError(err.message)
       else if (err instanceof ApiError && err.status === 422)
         setFormError('Please check your email and password and try again.')

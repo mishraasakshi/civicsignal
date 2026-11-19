@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.api.classify import classifier_dependency
+from app.core import rate_limit
 from app.core.security import hash_password
 from app.db.session import Base, get_db
 from app.main import app
@@ -44,6 +45,7 @@ def client(db_session_factory):
             db.close()
 
     app.dependency_overrides.clear()  # start clean, whatever other tests did
+    rate_limit.clear_all()  # every test starts with fresh login/sign-up limits
     app.dependency_overrides[get_db] = test_db
     app.dependency_overrides[classifier_dependency] = lambda: FakeClassifier()
     yield TestClient(app)

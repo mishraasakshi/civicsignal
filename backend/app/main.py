@@ -34,6 +34,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         404: "NOT_FOUND",
         409: "CONFLICT",
         422: "VALIDATION_ERROR",
+        429: "TOO_MANY_REQUESTS",
         500: "INTERNAL_SERVER_ERROR",
         503: "SERVICE_UNAVAILABLE",
     }
@@ -41,6 +42,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return JSONResponse(
         status_code=exc.status_code,
         content={"error": {"code": code, "message": str(exc.detail)}},
+        headers=getattr(exc, "headers", None),  # keep Retry-After, WWW-Authenticate, ...
     )
 
 @app.exception_handler(RequestValidationError)
