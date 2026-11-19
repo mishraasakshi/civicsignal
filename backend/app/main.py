@@ -35,6 +35,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         409: "CONFLICT",
         422: "VALIDATION_ERROR",
         500: "INTERNAL_SERVER_ERROR",
+        503: "SERVICE_UNAVAILABLE",
     }
     code = code_map.get(exc.status_code, "HTTP_ERROR")
     return JSONResponse(
@@ -88,3 +89,6 @@ app.include_router(complaints_router, prefix=settings.API_V1_STR)
 from app.api.auth import router as auth_router  # noqa: E402
 
 app.include_router(auth_router, prefix=settings.API_V1_STR)
+from app.api.insights import router as insights_router  # noqa: E402
+
+app.include_router(insights_router, prefix=settings.API_V1_STR)

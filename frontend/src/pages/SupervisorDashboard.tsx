@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { ApiError, listComplaints, type Category, type Complaint, type ComplaintFilters, type Status } from '../api'
+import { RepeatedProblems } from '../components/RepeatedProblems'
 import { SupervisorRow } from '../components/SupervisorRow'
 import { CATEGORIES, CATEGORY_LABELS, STATUSES } from '../labels'
 
-type View = 'review' | 'all'
+type View = 'review' | 'all' | 'groups'
 
 export function SupervisorDashboard() {
   const [view, setView] = useState<View>('review')
@@ -18,6 +19,7 @@ export function SupervisorDashboard() {
 
   // Reload the list whenever a filter changes
   useEffect(() => {
+    if (view === 'groups') return // that tab loads its own data
     let cancelled = false // ignore old answers if the filters changed again meanwhile
     const filters: ComplaintFilters = { limit: 100 }
     if (view === 'review') filters.needs_review = true
@@ -47,13 +49,13 @@ export function SupervisorDashboard() {
     listComplaints({ needs_review: true, limit: 1 })
       .then((res) => {
         setReviewCount(res.total)
-        if (res.total === 0) setView('all') // nothing to review: open the full list instead
+        if (res.total === 0) setView((v) => (v === 'review' ? 'all' : v)) // nothing to review: open the full list
       })
       .catch(() => setReviewCount(null))
   }, [])
 
   function changeView(next: View) {
-    setLoading(true)
+    if (next !== 'groups') setLoading(true)
     setView(next)
   }
 
@@ -88,8 +90,22 @@ export function SupervisorDashboard() {
           >
             All complaints
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'groups'}
+            className={view === 'groups' ? 'tab active' : 'tab'}
+            onClick={() => changeView('groups')}
+          >
+            🔁 Repeated problems
+          </button>
         </div>
       </div>
+
+      {view === 'groups' ? (
+        <RepeatedProblems />
+      ) : (
+        <>
 
       <div className="filters">
         <span className="filters-title">🔍 Show only:</span>
@@ -154,6 +170,8 @@ export function SupervisorDashboard() {
           <SupervisorRow key={c.id} complaint={c} onUpdated={handleUpdated} />
         ))}
       </div>
+        </>
+      )}
     </div>
   )
 }

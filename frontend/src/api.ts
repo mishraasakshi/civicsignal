@@ -171,3 +171,25 @@ export function updateComplaint(
 ): Promise<Complaint> {
   return request<Complaint>(`/api/complaints/${id}`, { method: 'PATCH', json: changes })
 }
+
+// ---- Insights (supervisors only) ----
+
+export interface GroupInsight {
+  group: number
+  size: number // how many complaints are in this group
+  title: string
+  summary: string
+  category: Category
+  urgency: Urgency
+  suggested_action: string
+}
+
+export interface GroupInsights {
+  source: string
+  generated_at: string
+  groups: GroupInsight[]
+}
+
+export function fetchGroupInsights(): Promise<GroupInsights> {
+  return request<GroupInsights>('/api/insights/groups')
+}
