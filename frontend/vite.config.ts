@@ -1,9 +1,15 @@
+/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  test: {
+    environment: 'jsdom', // a pretend browser for component tests
+    restoreMocks: true,
+    setupFiles: ['./src/test-setup.ts'],
+  },
   server: {
     // During development, send /api/... calls to the FastAPI backend.
     // The browser only ever talks to localhost:5173, so no CORS problems.
