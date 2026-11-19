@@ -77,8 +77,9 @@ The container refuses to start if any secret is weak or missing (see
 `backend/app/core/production_checks.py`) and runs database migrations at start-up.
 
 Settings used: 1 vCPU, 2 GiB memory, 0-1 replicas (scales to zero when idle, never more than
-one replica so the in-memory rate limiter sees every request). The registry is pulled with the
-app's managed identity - no registry password exists.
+one replica so the in-memory rate limiter sees every request). The registry is private; the app
+pulls from it with the registry's credentials, stored as a Container Apps secret (Express
+environments do not support managed-identity pulls).
 
 ## 4. First-time data (run on your own computer, pointed at Neon)
 

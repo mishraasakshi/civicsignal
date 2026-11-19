@@ -83,13 +83,19 @@ if az containerapp show -n "$APP" -g "$RG" -o none 2>/dev/null; then
 else
   # max-replicas 1: stays inside the free allowance, and the in-memory rate limiter sees
   # every request. min-replicas 0: sleeps when idle.
+  # Express environments cannot pull with a managed identity, so the app uses the registry's
+  # own credentials (stored by Container Apps as a secret; never printed)
+  az acr update -n "$ACR" --admin-enabled true -o none
+  ACR_USER="$(az acr credential show -n "$ACR" --query username -o tsv)"
+  ACR_PASS="$(az acr credential show -n "$ACR" --query 'passwords[0].value' -o tsv)"
   az containerapp create -n "$APP" -g "$RG" --environment "$ENVIRONMENT" \
-    --image "$IMAGE" --registry-server "$ACR.azurecr.io" --registry-identity system \
+    --image "$IMAGE" --registry-server "$ACR.azurecr.io" \
+    --registry-username "$ACR_USER" --registry-password "$ACR_PASS" \
     --ingress external --target-port 8080 \
     --cpu 1.0 --memory 2.0Gi --min-replicas 0 --max-replicas 1 \
     --secrets "${SECRETS[@]}" --env-vars "${ENV_VARS[@]}" -o none
 fi
-unset SECRETS
+unset SECRETS ACR_PASS
 
 echo "5/5 Removing old images (keeping the newest 2)..."
 for OLD in $(az acr repository show-tags -n "$ACR" --repository civicsignal --orderby time_desc -o tsv | tail -n +3); do
