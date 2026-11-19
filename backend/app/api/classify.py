@@ -1,9 +1,8 @@
 """POST /api/classify - suggest which team should handle a complaint."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
-
 from app.ml.classifier import ComplaintClassifier, get_classifier
 from app.schemas.classify import CategoryScore, ClassifyRequest, ClassifyResponse
+from fastapi import APIRouter, Depends, HTTPException, status
 
 router = APIRouter(tags=["Classification"])
 

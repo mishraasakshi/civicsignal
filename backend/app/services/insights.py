@@ -7,7 +7,7 @@ They are saved to data/processed/real_group_summaries_v1.json (git-ignored).
 """
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from app.ml.classifier import PROJECT_ROOT
@@ -27,5 +27,5 @@ def load_groups(path: Path) -> tuple[list[dict], datetime] | None:
         return None
     groups = json.loads(path.read_text(encoding="utf-8"))
     groups.sort(key=lambda g: (URGENCY_ORDER.get(g.get("urgency"), 9), -int(g.get("size", 0))))
-    made_at = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+    made_at = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
     return groups, made_at

@@ -4,16 +4,17 @@ import logging
 from datetime import UTC, datetime, timedelta
 
 import bcrypt
-from jose import JWTError, jwt
-
 from app.core.config import settings
+from jose import JWTError, jwt
 
 log = logging.getLogger(__name__)
 DEFAULT_SECRET = "change-me-to-a-secure-random-secret-key-in-production"
 
 if settings.JWT_SECRET_KEY == DEFAULT_SECRET or len(settings.JWT_SECRET_KEY) < 32:
     if settings.ENVIRONMENT != "development":
-        raise RuntimeError("JWT_SECRET_KEY is the default or too short - set a long random value in .env")
+        raise RuntimeError(
+            "JWT_SECRET_KEY is the default or too short - set a long random value in .env"
+        )
     log.warning("JWT_SECRET_KEY is the default/too short - fine for local tests only")
 
 

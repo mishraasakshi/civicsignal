@@ -20,7 +20,7 @@ import argparse
 import hashlib
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import joblib
@@ -39,7 +39,9 @@ def score(y_true, y_pred) -> dict:
     return {
         "n": int(len(y_true)),
         "accuracy": round(float(accuracy_score(y_true, y_pred)), 4),
-        "macro_f1": round(float(f1_score(y_true, y_pred, labels=labels, average="macro", zero_division=0)), 4),
+        "macro_f1": round(
+            float(f1_score(y_true, y_pred, labels=labels, average="macro", zero_division=0)), 4
+        ),
     }
 
 
@@ -67,9 +69,13 @@ def main() -> None:
     parser.add_argument("--out-dir", default="ml/artifacts")
     parser.add_argument("--val-size", type=float, default=0.2)
     parser.add_argument("--model-name", default=DEFAULT_MODEL)
-    parser.add_argument("--C", type=float, default=1.0, help="higher = fits training data more tightly")
+    parser.add_argument(
+        "--C", type=float, default=1.0, help="higher = fits training data more tightly"
+    )
     parser.add_argument("--name", default="embed_minilm", help="file name for saved model/metrics")
-    parser.add_argument("--hf-home", default="ml/.hf_cache", help="where the downloaded model is stored")
+    parser.add_argument(
+        "--hf-home", default="ml/.hf_cache", help="where the downloaded model is stored"
+    )
     args = parser.parse_args()
 
     # Keep the downloaded model inside the project (git-ignored) instead of ~/.cache
@@ -93,7 +99,7 @@ def main() -> None:
     all_texts = train_df["text"].tolist() + val_df["text"].tolist() + real_df["text"].tolist()
     vectors = embed(all_texts, args.model_name, cache_dir)
     n_tr, n_val = len(train_df), len(val_df)
-    X_train, X_val, X_real = vectors[:n_tr], vectors[n_tr:n_tr + n_val], vectors[n_tr + n_val:]
+    X_train, X_val, X_real = vectors[:n_tr], vectors[n_tr : n_tr + n_val], vectors[n_tr + n_val :]
     print(f"Each complaint is now {vectors.shape[1]} numbers")
 
     # 3. Train
@@ -122,16 +128,24 @@ def main() -> None:
     print("\n" + "=" * 64)
     print(f"{'':28s} {'accuracy':>9s} {'macro F1':>9s}")
     print(f"{'Synthetic validation':28s} {syn['accuracy']:9.3f} {syn['macro_f1']:9.3f}")
-    print(f"{'REAL genuine (most important)':28s} {r_gen['accuracy']:9.3f} {r_gen['macro_f1']:9.3f}")
+    print(
+        f"{'REAL genuine (most important)':28s} {r_gen['accuracy']:9.3f} {r_gen['macro_f1']:9.3f}"
+    )
     print(f"{'Real pasted batch':28s} {r_pas['accuracy']:9.3f} {r_pas['macro_f1']:9.3f}")
     print("=" * 64)
     if tfidf_real is not None:
-        print(f"Compare on REAL genuine:  TF-IDF {tfidf_real:.3f}  ->  embeddings {r_gen['accuracy']:.3f}"
-              f"  |  humans {human:.3f}")
+        print(
+            f"Compare on REAL genuine:  TF-IDF {tfidf_real:.3f}  ->  embeddings {r_gen['accuracy']:.3f}"
+            f"  |  humans {human:.3f}"
+        )
 
     real_gen = real_df[real_mask].assign(predicted=real_pred[real_mask])
     print("\nPer-category report (REAL genuine only):")
-    print(classification_report(real_gen["our_label"], real_gen["predicted"], digits=3, zero_division=0))
+    print(
+        classification_report(
+            real_gen["our_label"], real_gen["predicted"], digits=3, zero_division=0
+        )
+    )
 
     wrong = real_gen[real_gen["predicted"] != real_gen["our_label"]]
     print(f"Mistakes on real complaints ({len(wrong)} of {len(real_gen)}):")
@@ -140,13 +154,15 @@ def main() -> None:
 
     # 7. Save
     out_dir.mkdir(parents=True, exist_ok=True)
-    joblib.dump({"embedding_model": args.model_name, "classifier": clf}, out_dir / f"{args.name}.joblib")
+    joblib.dump(
+        {"embedding_model": args.model_name, "classifier": clf}, out_dir / f"{args.name}.joblib"
+    )
     metrics = {
         "model": f"{args.model_name} + logistic_regression",
         "C": args.C,
         "data": args.data,
         "real_data": args.real,
-        "trained_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "trained_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "seed": SEED,
         "embedding_dim": int(vectors.shape[1]),
         "synthetic_val": syn,
@@ -159,8 +175,10 @@ def main() -> None:
     (out_dir / f"{args.name}_metrics.json").write_text(json.dumps(metrics, indent=2))
     print(f"\nSaved model   -> {out_dir / (args.name + '.joblib')}")
     print(f"Saved metrics -> {out_dir / (args.name + '_metrics.json')}")
-    print(f"\nSUMMARY [{args.name} C={args.C}]  synthetic={syn['accuracy']:.3f}  "
-          f"real_genuine={r_gen['accuracy']:.3f}  pasted={r_pas['accuracy']:.3f}")
+    print(
+        f"\nSUMMARY [{args.name} C={args.C}]  synthetic={syn['accuracy']:.3f}  "
+        f"real_genuine={r_gen['accuracy']:.3f}  pasted={r_pas['accuracy']:.3f}"
+    )
 
 
 if __name__ == "__main__":

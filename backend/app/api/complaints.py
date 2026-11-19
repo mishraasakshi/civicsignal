@@ -8,10 +8,6 @@ PATCH /api/complaints/{id}  - supervisors only: correct category and/or move sta
 The reporter's identity is stored but never returned, so students can complain without fear.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
-
 from app.api.classify import classifier_dependency
 from app.api.deps import get_current_user, require_supervisor
 from app.db.session import get_db
@@ -27,6 +23,9 @@ from app.schemas.complaint import (
     Status,
 )
 from app.services.workflow import ALLOWED, can_move
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/complaints", tags=["Complaints"])
 
@@ -76,8 +75,9 @@ def list_complaints(
         query = query.where(Complaint.needs_review == needs_review)
 
     total = db.scalar(select(func.count()).select_from(query.subquery()))
-    rows = db.scalars(query.order_by(Complaint.created_at.desc(), Complaint.id.desc())
-                      .limit(limit).offset(offset)).all()
+    rows = db.scalars(
+        query.order_by(Complaint.created_at.desc(), Complaint.id.desc()).limit(limit).offset(offset)
+    ).all()
     return ComplaintList(total=total or 0, items=rows)
 
 
@@ -111,7 +111,9 @@ def update_complaint(
         )
 
     if body.category is not None:
-        complaint.category = body.category  # predicted_category is kept, so we can measure the AI later
+        complaint.category = (
+            body.category
+        )  # predicted_category is kept, so we can measure the AI later
         complaint.needs_review = False  # a human has looked at it
     if body.status is not None:
         complaint.status = body.status

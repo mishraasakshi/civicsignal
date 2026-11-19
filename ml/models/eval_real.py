@@ -12,7 +12,7 @@ The "correct answer" is our_label (from the labelling rules).
 
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import joblib
@@ -31,7 +31,9 @@ def score(y_true, y_pred) -> dict:
     return {
         "n": int(len(y_true)),
         "accuracy": round(float(accuracy_score(y_true, y_pred)), 4),
-        "macro_f1": round(float(f1_score(y_true, y_pred, labels=labels, average="macro", zero_division=0)), 4),
+        "macro_f1": round(
+            float(f1_score(y_true, y_pred, labels=labels, average="macro", zero_division=0)), 4
+        ),
     }
 
 
@@ -44,13 +46,19 @@ def main() -> None:
 
     df = pd.read_csv(args.data).fillna("")
     real_mask = df["source"] == "real"
-    print(f"Loaded {len(df)} real-survey complaints  (real: {real_mask.sum()}, pasted: {(~real_mask).sum()})\n")
+    print(
+        f"Loaded {len(df)} real-survey complaints  (real: {real_mask.sum()}, pasted: {(~real_mask).sum()})\n"
+    )
 
     student = score(df.loc[real_mask, "our_label"], df.loc[real_mask, "student_label"])
-    print(f"HUMAN BASELINE  students vs our rules (real only): accuracy={student['accuracy']:.3f}\n")
+    print(
+        f"HUMAN BASELINE  students vs our rules (real only): accuracy={student['accuracy']:.3f}\n"
+    )
 
     results = {}
-    print(f"{'model':6s} | {'ALL acc':>8s} {'ALL F1':>7s} | {'REAL acc':>8s} {'REAL F1':>8s} | {'PASTED acc':>10s}")
+    print(
+        f"{'model':6s} | {'ALL acc':>8s} {'ALL F1':>7s} | {'REAL acc':>8s} {'REAL F1':>8s} | {'PASTED acc':>10s}"
+    )
     print("-" * 64)
     for name, file in MODELS.items():
         path = Path(args.artifacts) / file
@@ -83,12 +91,17 @@ def main() -> None:
         print(f"  true={row['our_label']:14s} pred={row[col]:14s} | {row['text'][:85]}")
 
     out = Path(args.artifacts) / "real_eval_metrics.json"
-    out.write_text(json.dumps({
-        "data": args.data,
-        "evaluated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "human_baseline_real_only": student,
-        "models": results,
-    }, indent=2))
+    out.write_text(
+        json.dumps(
+            {
+                "data": args.data,
+                "evaluated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+                "human_baseline_real_only": student,
+                "models": results,
+            },
+            indent=2,
+        )
+    )
     print(f"\nSaved metrics -> {out}")
 
 

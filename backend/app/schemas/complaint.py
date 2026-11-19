@@ -5,16 +5,34 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-Category = Literal["water_plumbing", "electrical", "cleanliness", "internet_wifi",
-                   "furniture", "mess_food", "security", "other"]
-Status = Literal["Submitted", "Under Review", "Assigned", "In Progress",
-                 "Resolved", "Closed", "Needs More Information"]
+Category = Literal[
+    "water_plumbing",
+    "electrical",
+    "cleanliness",
+    "internet_wifi",
+    "furniture",
+    "mess_food",
+    "security",
+    "other",
+]
+Status = Literal[
+    "Submitted",
+    "Under Review",
+    "Assigned",
+    "In Progress",
+    "Resolved",
+    "Closed",
+    "Needs More Information",
+]
 Urgency = Literal["low", "medium", "high"]
 
 
 class ComplaintCreate(BaseModel):
-    text: str = Field(min_length=3, max_length=2000,
-                      examples=["Hostel B ke washroom me 3 din se paani nahi aa raha"])
+    text: str = Field(
+        min_length=3,
+        max_length=2000,
+        examples=["Hostel B ke washroom me 3 din se paani nahi aa raha"],
+    )
     location: str | None = Field(default=None, max_length=200, examples=["Hostel B"])
     urgency: Urgency | None = Field(default=None, description="how urgent the student thinks it is")
 

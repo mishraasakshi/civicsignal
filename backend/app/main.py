@@ -1,17 +1,22 @@
 from __future__ import annotations
-from fastapi import FastAPI, HTTPException, Request, status
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from starlette.exceptions import HTTPException as StarletteHTTPException
-from fastapi.exceptions import RequestValidationError
+
 from app.core.config import settings
 from app.core.production_checks import enforce
 from app.core.security_headers import SecurityHeadersMiddleware
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 enforce(settings)  # stop here if production settings are unsafe
 
 # Interactive API docs only in development (or when ENABLE_DOCS=true)
-SHOW_DOCS = settings.ENABLE_DOCS if settings.ENABLE_DOCS is not None else settings.ENVIRONMENT == "development"
+SHOW_DOCS = (
+    settings.ENABLE_DOCS
+    if settings.ENABLE_DOCS is not None
+    else settings.ENVIRONMENT == "development"
+)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -31,6 +36,7 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 app.add_middleware(SecurityHeadersMiddleware, https_only=settings.ENVIRONMENT != "development")
+
 
 # Standardized Error Format: {"error": {"code": str, "message": str}}
 @app.exception_handler(StarletteHTTPException)
@@ -53,16 +59,24 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         headers=getattr(exc, "headers", None),  # keep Retry-After, WWW-Authenticate, ...
     )
 
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     # Name the field and the problem, but never echo what was sent (it could be a password)
     parts = []
     for err in exc.errors():
         field = ".".join(str(p) for p in err.get("loc", ()) if p not in ("body", "query", "path"))
-        parts.append(f"{field}: {err.get('msg', 'invalid')}" if field else err.get("msg", "invalid"))
+        parts.append(
+            f"{field}: {err.get('msg', 'invalid')}" if field else err.get("msg", "invalid")
+        )
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"error": {"code": "VALIDATION_ERROR", "message": "Input validation failed: " + "; ".join(parts)}},
+        content={
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Input validation failed: " + "; ".join(parts),
+            }
+        },
     )
 
 
@@ -75,6 +89,7 @@ def health_check():
         "environment": settings.ENVIRONMENT,
     }
 
+
 @app.get("/", tags=["Root"])
 def root():
     return {
@@ -84,6 +99,7 @@ def root():
         "docs": "/docs",
         "pilot_target": "Amity University Lucknow",
     }
+
 
 # ---------------------------------------------------------------------------
 # Routers (Phase 5)

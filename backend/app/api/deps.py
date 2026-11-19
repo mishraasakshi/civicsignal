@@ -1,13 +1,12 @@
 """Who is calling? Reusable checks for protected endpoints."""
 
-from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
-
 from app.core.config import settings
 from app.core.security import decode_access_token
 from app.db.session import get_db
 from app.models.user import User
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
 
 # tokenUrl makes the "Authorize" button in /docs work
 # auto_error=False: if there is no Authorization header we still check the session cookie

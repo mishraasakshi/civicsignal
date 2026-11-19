@@ -3,9 +3,8 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
-
 from app.schemas.complaint import Category
+from pydantic import BaseModel, Field
 
 
 class GroupInsight(BaseModel):

@@ -5,11 +5,6 @@ Supervisors cannot sign up here - create them with backend/scripts/create_superv
 
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
-from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from app.api.deps import get_current_user
 from app.core import rate_limit
 from app.core.config import settings
@@ -17,6 +12,10 @@ from app.core.security import DUMMY_HASH, create_access_token, hash_password, ve
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import RegisterIn, Token, UserOut
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 

@@ -13,13 +13,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # backend/
 
-from sqlalchemy import select  # noqa: E402
-
 from app.core.security import hash_password  # noqa: E402
 from app.db.session import SessionLocal  # noqa: E402
 from app.models import complaint  # noqa: E402,F401
 from app.models.user import User  # noqa: E402
 from app.schemas.auth import RegisterIn  # noqa: E402
+from sqlalchemy import select  # noqa: E402
 
 
 def main() -> None:
@@ -38,7 +37,9 @@ def main() -> None:
     with SessionLocal() as db:
         user = db.scalar(select(User).where(User.email == data.email))
         if user is None:
-            user = User(email=data.email, hashed_password=hash_password(data.password), role="supervisor")
+            user = User(
+                email=data.email, hashed_password=hash_password(data.password), role="supervisor"
+            )
             db.add(user)
             action = "Created"
         else:

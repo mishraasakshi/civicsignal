@@ -22,7 +22,9 @@ from fastapi import HTTPException, status
 
 
 class RateLimiter:
-    def __init__(self, max_events: int, window_seconds: float, clock: Callable[[], float] = time.monotonic):
+    def __init__(
+        self, max_events: int, window_seconds: float, clock: Callable[[], float] = time.monotonic
+    ):
         self.max_events = max_events
         self.window = window_seconds
         self.clock = clock

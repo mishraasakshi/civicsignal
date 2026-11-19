@@ -1,8 +1,8 @@
 from __future__ import annotations
-import os
-from typing import List
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "CivicSignal"
@@ -19,8 +19,12 @@ class Settings(BaseSettings):
     SESSION_COOKIE_NAME: str = "cs_session"
 
     # Database URLs
-    DATABASE_URL: str = Field(default="postgresql://civicuser:civicpassword@localhost:5432/civicsignal")
-    DATABASE_READONLY_URL: str = Field(default="postgresql://civic_readonly:readonlypassword@localhost:5432/civicsignal")
+    DATABASE_URL: str = Field(
+        default="postgresql://civicuser:civicpassword@localhost:5432/civicsignal"
+    )
+    DATABASE_READONLY_URL: str = Field(
+        default="postgresql://civic_readonly:readonlypassword@localhost:5432/civicsignal"
+    )
 
     # LLM (Groq)
     GROQ_API_KEY: str = Field(default="")
@@ -32,14 +36,14 @@ class Settings(BaseSettings):
     CLASSIFIER_MODEL_PATH: str = "ml/artifacts/classifier_model.pkl"
 
     # CORS
-    CORS_ORIGINS: List[str] = [
+    CORS_ORIGINS: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
     ]
 
     # Domain Constants
-    CATEGORIES: List[str] = [
+    CATEGORIES: list[str] = [
         "water_plumbing",
         "electrical",
         "cleanliness",
@@ -50,7 +54,7 @@ class Settings(BaseSettings):
         "other",
     ]
 
-    STATUSES: List[str] = [
+    STATUSES: list[str] = [
         "Submitted",
         "Under Review",
         "Assigned",
@@ -60,15 +64,12 @@ class Settings(BaseSettings):
         "Needs More Information",
     ]
 
-    ROLES: List[str] = [
+    ROLES: list[str] = [
         "reporter",
         "supervisor",
     ]
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
 
 settings = Settings()

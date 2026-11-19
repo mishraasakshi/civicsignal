@@ -8,7 +8,11 @@ def test_must_be_logged_in(client):
 
 def test_create_classifies_and_saves(client, auth):
     me = auth("s1@x.co")
-    r = client.post("/api/complaints", json={"text": "  wifi   not working ", "location": "Hostel B", "urgency": "high"}, headers=me)
+    r = client.post(
+        "/api/complaints",
+        json={"text": "  wifi   not working ", "location": "Hostel B", "urgency": "high"},
+        headers=me,
+    )
     assert r.status_code == 201
     c = r.json()
     assert c["text"] == "wifi not working"
@@ -24,7 +28,9 @@ def test_students_see_only_their_own(client, auth):
 
     a = client.get("/api/complaints", headers=alice).json()
     assert a["total"] == 1 and a["items"][0]["text"] == "wifi slow"
-    assert client.get("/api/complaints/2", headers=alice).status_code == 404  # bob's: looks like it does not exist
+    assert (
+        client.get("/api/complaints/2", headers=alice).status_code == 404
+    )  # bob's: looks like it does not exist
 
 
 def test_supervisor_sees_all_with_filters(client, auth):
@@ -36,7 +42,12 @@ def test_supervisor_sees_all_with_filters(client, auth):
     everything = client.get("/api/complaints", headers=boss).json()
     assert everything["total"] == 3
     assert everything["items"][0]["text"] == "wifi down again"  # newest first
-    assert client.get("/api/complaints", params={"category": "internet_wifi"}, headers=boss).json()["total"] == 2
+    assert (
+        client.get("/api/complaints", params={"category": "internet_wifi"}, headers=boss).json()[
+            "total"
+        ]
+        == 2
+    )
     review = client.get("/api/complaints", params={"needs_review": True}, headers=boss).json()
     assert [c["text"] for c in review["items"]] == ["dirty corridor"]
     page = client.get("/api/complaints", params={"limit": 1, "offset": 1}, headers=boss).json()
@@ -46,6 +57,14 @@ def test_supervisor_sees_all_with_filters(client, auth):
 
 def test_bad_input_is_rejected(client, auth):
     me = auth("s@x.co")
-    assert client.post("/api/complaints", json={"text": "wifi", "urgency": "extreme"}, headers=me).status_code == 422
-    assert client.get("/api/complaints", params={"category": "plumbing"}, headers=me).status_code == 422
+    assert (
+        client.post(
+            "/api/complaints", json={"text": "wifi", "urgency": "extreme"}, headers=me
+        ).status_code
+        == 422
+    )
+    assert (
+        client.get("/api/complaints", params={"category": "plumbing"}, headers=me).status_code
+        == 422
+    )
     assert client.get("/api/complaints", params={"status": "Done"}, headers=me).status_code == 422

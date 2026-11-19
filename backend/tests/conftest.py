@@ -4,11 +4,6 @@ Real PostgreSQL, the real model and the network are never used.
 """
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
 from app.api.classify import classifier_dependency
 from app.core import rate_limit
 from app.core.security import hash_password
@@ -17,6 +12,10 @@ from app.main import app
 from app.ml.classifier import Prediction
 from app.models import complaint, user  # noqa: F401  (register tables)
 from app.models.user import User
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 class FakeClassifier:
@@ -30,7 +29,9 @@ class FakeClassifier:
 
 @pytest.fixture
 def db_session_factory():
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
 

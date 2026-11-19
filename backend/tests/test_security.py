@@ -3,16 +3,15 @@
 from types import SimpleNamespace
 
 import pytest
-
 from app.core.production_checks import enforce, find_problems
 
-GOOD = dict(
-    ENVIRONMENT="production",
-    JWT_SECRET_KEY="x" * 48,
-    DATABASE_URL="postgresql://civicuser:Str0ng-Unique-Pass@db.internal:5432/civicsignal",
-    DATABASE_READONLY_URL="postgresql://civic_readonly:An0ther-Strong-Pass@db.internal:5432/civicsignal",
-    CORS_ORIGINS=["https://civicsignal.example.edu"],
-)
+GOOD = {
+    "ENVIRONMENT": "production",
+    "JWT_SECRET_KEY": "x" * 48,
+    "DATABASE_URL": "postgresql://civicuser:Str0ng-Unique-Pass@db.internal:5432/civicsignal",
+    "DATABASE_READONLY_URL": "postgresql://civic_readonly:An0ther-Strong-Pass@db.internal:5432/civicsignal",
+    "CORS_ORIGINS": ["https://civicsignal.example.edu"],
+}
 
 
 def settings(**changes):
@@ -29,8 +28,14 @@ def test_good_production_settings_pass():
     [
         ({"JWT_SECRET_KEY": "civicsignal-local-secret-key-2026"}, "published in this repository"),
         ({"JWT_SECRET_KEY": "short"}, "shorter than 32"),
-        ({"DATABASE_URL": "postgresql://civicuser:civicpassword@db:5432/civicsignal"}, "DATABASE_URL uses a default password"),
-        ({"DATABASE_READONLY_URL": "postgresql://civic_readonly:readonlypassword@db/x"}, "DATABASE_READONLY_URL"),
+        (
+            {"DATABASE_URL": "postgresql://civicuser:civicpassword@db:5432/civicsignal"},
+            "DATABASE_URL uses a default password",
+        ),
+        (
+            {"DATABASE_READONLY_URL": "postgresql://civic_readonly:readonlypassword@db/x"},
+            "DATABASE_READONLY_URL",
+        ),
         ({"CORS_ORIGINS": ["*"]}, "'*'"),
         ({"CORS_ORIGINS": ["http://civicsignal.example.edu"]}, "not https"),
     ],
@@ -42,12 +47,21 @@ def test_unsafe_production_settings_refuse_to_start(changes, expected):
 
 
 def test_development_only_warns(caplog):
-    enforce(settings(ENVIRONMENT="development", JWT_SECRET_KEY="short", CORS_ORIGINS=["http://localhost:5173"]))
+    enforce(
+        settings(
+            ENVIRONMENT="development",
+            JWT_SECRET_KEY="short",
+            CORS_ORIGINS=["http://localhost:5173"],
+        )
+    )
     assert "shorter than 32" in caplog.text
 
 
 def test_localhost_http_is_fine():
-    assert find_problems(settings(CORS_ORIGINS=["http://localhost:5173", "http://127.0.0.1:5173"])) == []
+    assert (
+        find_problems(settings(CORS_ORIGINS=["http://localhost:5173", "http://127.0.0.1:5173"]))
+        == []
+    )
 
 
 def test_api_responses_have_security_headers(client):

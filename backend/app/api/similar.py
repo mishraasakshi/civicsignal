@@ -1,10 +1,9 @@
 """POST /api/similar - find past complaints about the same problem."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
-
 from app.api.deps import get_current_user
 from app.ml.similar import DUPLICATE_THRESHOLD, SimilarIndex, get_similar_index
 from app.schemas.similar import SimilarMatch, SimilarRequest, SimilarResponse
+from fastapi import APIRouter, Depends, HTTPException, status
 
 # Returns other students' complaint text, so only logged-in users may search
 router = APIRouter(tags=["Similar complaints"], dependencies=[Depends(get_current_user)])

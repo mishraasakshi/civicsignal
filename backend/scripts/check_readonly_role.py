@@ -12,10 +12,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # backend/
 
+from app.core.config import settings  # noqa: E402
 from sqlalchemy import create_engine, text  # noqa: E402
 from sqlalchemy.exc import ProgrammingError  # noqa: E402
-
-from app.core.config import settings  # noqa: E402
 
 
 def readonly_url() -> str:
@@ -37,7 +36,11 @@ def allowed(conn, sql: str) -> bool:
 def main() -> None:
     engine = create_engine(readonly_url())
     checks = [
-        ("can read complaint text/category/status", "SELECT count(id), count(text), count(status) FROM complaints", True),
+        (
+            "can read complaint text/category/status",
+            "SELECT count(id), count(text), count(status) FROM complaints",
+            True,
+        ),
         ("cannot read complaints.reporter_id", "SELECT reporter_id FROM complaints LIMIT 1", False),
         ("cannot SELECT * (would include reporter_id)", "SELECT * FROM complaints LIMIT 1", False),
         ("cannot read users table", "SELECT count(*) FROM users", False),
@@ -53,7 +56,11 @@ def main() -> None:
             failures += not ok
             print(f"{'PASS' if ok else 'FAIL'}  {name}")
         conn.rollback()
-    print("\nAll good: the read-only role follows least privilege." if not failures else f"\n{failures} check(s) FAILED")
+    print(
+        "\nAll good: the read-only role follows least privilege."
+        if not failures
+        else f"\n{failures} check(s) FAILED"
+    )
     sys.exit(1 if failures else 0)
 
 

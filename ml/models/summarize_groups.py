@@ -25,8 +25,16 @@ from typing import Literal
 import pandas as pd
 from pydantic import BaseModel, Field, ValidationError
 
-CATEGORIES = Literal["water_plumbing", "electrical", "cleanliness", "internet_wifi",
-                     "furniture", "mess_food", "security", "other"]
+CATEGORIES = Literal[
+    "water_plumbing",
+    "electrical",
+    "cleanliness",
+    "internet_wifi",
+    "furniture",
+    "mess_food",
+    "security",
+    "other",
+]
 
 
 class GroupSummary(BaseModel):
@@ -34,7 +42,9 @@ class GroupSummary(BaseModel):
     summary: str = Field(max_length=400, description="1-2 sentences, English")
     category: CATEGORIES
     urgency: Literal["low", "medium", "high"]
-    suggested_action: str = Field(max_length=300, description="one concrete next step for the admin")
+    suggested_action: str = Field(
+        max_length=300, description="one concrete next step for the admin"
+    )
 
 
 SYSTEM_PROMPT = """You help a university facilities office read student complaints.
@@ -58,7 +68,10 @@ USER_TEMPLATE = "Number of complaints: {n}\n\nComplaints:\n{complaints}"
 
 def build_messages(texts: list[str]) -> list[tuple[str, str]]:
     lines = "\n".join(f"{i}. {t}" for i, t in enumerate(texts, 1))
-    return [("system", SYSTEM_PROMPT), ("human", USER_TEMPLATE.format(n=len(texts), complaints=lines))]
+    return [
+        ("system", SYSTEM_PROMPT),
+        ("human", USER_TEMPLATE.format(n=len(texts), complaints=lines)),
+    ]
 
 
 def parse_reply(content: str) -> GroupSummary:
@@ -66,7 +79,7 @@ def parse_reply(content: str) -> GroupSummary:
     start, end = content.find("{"), content.rfind("}")
     if start == -1 or end == -1:
         raise ValueError("no JSON object in reply")
-    return GroupSummary.model_validate_json(content[start:end + 1])
+    return GroupSummary.model_validate_json(content[start : end + 1])
 
 
 def make_llm(model_name: str):
@@ -78,14 +91,16 @@ def make_llm(model_name: str):
 def summarise(llm, texts: list[str]) -> GroupSummary:
     messages = build_messages(texts)
     last_error = None
-    for attempt in range(2):  # one retry if the answer has the wrong shape
+    for _attempt in range(2):  # one retry if the answer has the wrong shape
         reply = llm.invoke(messages)
         try:
             return parse_reply(str(reply.content))
         except (ValueError, ValidationError) as e:
             last_error = e
-            messages = messages + [("ai", str(reply.content)),
-                                   ("human", "That was not valid. Reply with only the JSON object.")]
+            messages = messages + [
+                ("ai", str(reply.content)),
+                ("human", "That was not valid. Reply with only the JSON object."),
+            ]
     raise RuntimeError(f"invalid answer twice: {last_error}")
 
 
@@ -95,8 +110,12 @@ def main() -> None:
     parser.add_argument("--out", default="data/processed/real_group_summaries_v1.json")
     parser.add_argument("--cache", default="data/processed/group_summary_cache.json")
     parser.add_argument("--model-name", default=None, help="default: GROQ_MODEL_NAME from .env")
-    parser.add_argument("--max-per-group", type=int, default=15, help="send at most this many texts per group")
-    parser.add_argument("--dry-run", action="store_true", help="print the prompts, do not call Groq")
+    parser.add_argument(
+        "--max-per-group", type=int, default=15, help="send at most this many texts per group"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="print the prompts, do not call Groq"
+    )
     args = parser.parse_args()
 
     df = pd.read_csv(args.groups).fillna("")
@@ -127,7 +146,9 @@ def main() -> None:
 
     for g, members in sorted(groups, key=lambda kv: -len(kv[1])):
         texts = members["text"].tolist()[: args.max_per_group]
-        key = hashlib.sha1((model_name + "\n" + SYSTEM_PROMPT + "\n".join(texts)).encode()).hexdigest()[:16]
+        key = hashlib.sha1(
+            (model_name + "\n" + SYSTEM_PROMPT + "\n".join(texts)).encode()
+        ).hexdigest()[:16]
 
         if key in cache:
             s = GroupSummary(**cache[key])
@@ -146,17 +167,25 @@ def main() -> None:
             time.sleep(1)  # be gentle with the free tier
 
         main_label = members["our_label"].mode().iloc[0]
-        results.append({
-            "group": int(g),
-            "size": int(len(members)),
-            "genuine": int((members["source"] == "real").sum()),
-            "cluster_main_label": main_label,
-            "ids": members["id"].tolist(),
-            **s.model_dump(),
-        })
-        flag = "" if s.category == main_label else f"  (LLM says {s.category}, labels say {main_label})"
-        print(f"Group {g}  [{len(members)} complaints, {results[-1]['genuine']} genuine]  "
-              f"{s.urgency.upper()}  {s.category}{flag}")
+        results.append(
+            {
+                "group": int(g),
+                "size": int(len(members)),
+                "genuine": int((members["source"] == "real").sum()),
+                "cluster_main_label": main_label,
+                "ids": members["id"].tolist(),
+                **s.model_dump(),
+            }
+        )
+        flag = (
+            ""
+            if s.category == main_label
+            else f"  (LLM says {s.category}, labels say {main_label})"
+        )
+        print(
+            f"Group {g}  [{len(members)} complaints, {results[-1]['genuine']} genuine]  "
+            f"{s.urgency.upper()}  {s.category}{flag}"
+        )
         print(f"  Title  : {s.title}")
         print(f"  Summary: {s.summary}")
         print(f"  Action : {s.suggested_action}\n")

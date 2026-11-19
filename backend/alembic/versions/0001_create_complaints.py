@@ -4,6 +4,7 @@ Revision ID: 0001
 Revises:
 Create Date: 2026-11-19
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -27,8 +28,12 @@ def upgrade() -> None:
         sa.Column("needs_review", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("category", sa.String(32), nullable=False),
         sa.Column("status", sa.String(32), nullable=False, server_default="Submitted"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
     op.create_index("ix_complaints_category", "complaints", ["category"])
     op.create_index("ix_complaints_status", "complaints", ["status"])

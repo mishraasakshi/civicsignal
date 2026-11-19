@@ -11,6 +11,7 @@ Revision ID: 0003
 Revises: 0002
 Create Date: 2026-11-19
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -34,7 +35,10 @@ def _role_exists() -> bool:
     bind = op.get_bind()
     if bind.dialect.name != "postgresql":  # e.g. SQLite in tests: no roles
         return False
-    return bind.execute(sa.text("SELECT 1 FROM pg_roles WHERE rolname = :r"), {"r": ROLE}).scalar() is not None
+    return (
+        bind.execute(sa.text("SELECT 1 FROM pg_roles WHERE rolname = :r"), {"r": ROLE}).scalar()
+        is not None
+    )
 
 
 def upgrade() -> None:

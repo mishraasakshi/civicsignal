@@ -14,6 +14,7 @@ class FakeClock:
 
 # ---------- the limiter on its own (fake clock, no waiting) ----------
 
+
 def test_limiter_allows_up_to_max_then_blocks_until_window_passes():
     clock = FakeClock()
     limiter = RateLimiter(max_events=3, window_seconds=60, clock=clock)
@@ -35,6 +36,7 @@ def test_limiter_keys_are_independent_and_reset_works():
 
 
 # ---------- through the API ----------
+
 
 def _login(client, email, password):
     return client.post("/api/auth/login", data={"username": email, "password": password})
@@ -66,7 +68,9 @@ def test_successful_login_resets_the_failure_count(client, make_user):
 def test_unknown_emails_are_limited_the_same_way(client):
     for _ in range(5):
         assert _login(client, "ghost@x.co", "whatever1").status_code == 401
-    assert _login(client, "ghost@x.co", "whatever1").status_code == 429  # no hint the email doesn't exist
+    assert (
+        _login(client, "ghost@x.co", "whatever1").status_code == 429
+    )  # no hint the email doesn't exist
 
 
 def test_one_network_cannot_try_many_accounts(client):
@@ -77,7 +81,9 @@ def test_one_network_cannot_try_many_accounts(client):
 
 def test_sign_up_is_limited_per_network(client):
     for i in range(10):
-        r = client.post("/api/auth/register", json={"email": f"new{i}@x.co", "password": "longpassword"})
+        r = client.post(
+            "/api/auth/register", json={"email": f"new{i}@x.co", "password": "longpassword"}
+        )
         assert r.status_code == 201
     r = client.post("/api/auth/register", json={"email": "new10@x.co", "password": "longpassword"})
     assert r.status_code == 429

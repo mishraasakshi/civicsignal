@@ -15,7 +15,7 @@ What it does:
 
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import joblib
@@ -115,7 +115,7 @@ def main() -> None:
     labels = list(pipe.named_steps["clf"].classes_)
     cm = confusion_matrix(val_df["category"], pred, labels=labels)
     print("Confusion matrix (rows = true, columns = predicted):")
-    print(pd.DataFrame(cm, index=labels, columns=[l[:6] for l in labels]).to_string())
+    print(pd.DataFrame(cm, index=labels, columns=[label[:6] for label in labels]).to_string())
 
     by_source = {}
     if "source_model" in val_df.columns:
@@ -144,7 +144,7 @@ def main() -> None:
         "model": f"tfidf_{args.features} + logistic_regression",
         "features": args.features,
         "data": args.data,
-        "trained_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "trained_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "seed": SEED,
         "n_train": len(train_df),
         "n_val": len(val_df),

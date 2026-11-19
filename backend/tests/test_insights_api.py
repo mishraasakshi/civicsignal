@@ -3,20 +3,46 @@
 import json
 
 import pytest
-
 from app.main import app
 from app.services.insights import summaries_path
 
 GROUPS = [
-    {"group": 1, "size": 4, "genuine": 4, "cluster_main_label": "mess_food", "ids": ["r1", "r2"],
-     "title": "Token system for mess", "summary": "Four students want tokens.",
-     "category": "mess_food", "urgency": "medium", "suggested_action": "Discuss with the mess committee."},
-    {"group": 2, "size": 2, "genuine": 0, "cluster_main_label": "electrical", "ids": ["r3"],
-     "title": "Fan fell", "summary": "Two students report a falling fan.",
-     "category": "electrical", "urgency": "high", "suggested_action": "Inspect fans."},
-    {"group": 3, "size": 5, "genuine": 1, "cluster_main_label": "internet_wifi", "ids": ["r4"],
-     "title": "Slow wifi", "summary": "Five students report slow wifi.",
-     "category": "internet_wifi", "urgency": "medium", "suggested_action": "Check the router."},
+    {
+        "group": 1,
+        "size": 4,
+        "genuine": 4,
+        "cluster_main_label": "mess_food",
+        "ids": ["r1", "r2"],
+        "title": "Token system for mess",
+        "summary": "Four students want tokens.",
+        "category": "mess_food",
+        "urgency": "medium",
+        "suggested_action": "Discuss with the mess committee.",
+    },
+    {
+        "group": 2,
+        "size": 2,
+        "genuine": 0,
+        "cluster_main_label": "electrical",
+        "ids": ["r3"],
+        "title": "Fan fell",
+        "summary": "Two students report a falling fan.",
+        "category": "electrical",
+        "urgency": "high",
+        "suggested_action": "Inspect fans.",
+    },
+    {
+        "group": 3,
+        "size": 5,
+        "genuine": 1,
+        "cluster_main_label": "internet_wifi",
+        "ids": ["r4"],
+        "title": "Slow wifi",
+        "summary": "Five students report slow wifi.",
+        "category": "internet_wifi",
+        "urgency": "medium",
+        "suggested_action": "Check the router.",
+    },
 ]
 
 
@@ -43,7 +69,11 @@ def test_supervisor_gets_groups_most_urgent_first(client, auth, summaries_file):
     assert r.status_code == 200
     body = r.json()
     titles = [g["title"] for g in body["groups"]]
-    assert titles == ["Fan fell", "Slow wifi", "Token system for mess"]  # high first, then bigger first
+    assert titles == [
+        "Fan fell",
+        "Slow wifi",
+        "Token system for mess",
+    ]  # high first, then bigger first
     assert body["generated_at"]
 
 

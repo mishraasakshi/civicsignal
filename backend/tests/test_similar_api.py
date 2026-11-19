@@ -1,12 +1,11 @@
 """Tests for POST /api/similar, using a tiny fake 'embedding' so no model is needed."""
 
 import numpy as np
-from fastapi.testclient import TestClient
-
 from app.api.deps import get_current_user
 from app.api.similar import index_dependency
 from app.main import app
 from app.ml.similar import SimilarIndex
+from fastapi.testclient import TestClient
 
 WORDS = ["wifi", "slow", "mess", "token", "geyser", "water"]
 

@@ -21,7 +21,7 @@ import multiprocessing as mp
 import os
 import sys
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -65,10 +65,16 @@ def main() -> None:
     parser.add_argument("--groups-out", default="data/processed/real_clusters_v1.csv")
     parser.add_argument("--model-name", default=DEFAULT_MODEL)
     parser.add_argument("--hf-home", default="ml/.hf_cache")
-    parser.add_argument("--eps", type=float, default=0.30,
-                        help="max cosine distance to count as 'same problem' (smaller = stricter)")
+    parser.add_argument(
+        "--eps",
+        type=float,
+        default=0.30,
+        help="max cosine distance to count as 'same problem' (smaller = stricter)",
+    )
     parser.add_argument("--min-samples", type=int, default=2, help="smallest group size")
-    parser.add_argument("--dup-threshold", type=float, default=0.90, help="similarity counted as near-duplicate")
+    parser.add_argument(
+        "--dup-threshold", type=float, default=0.90, help="similarity counted as near-duplicate"
+    )
     parser.add_argument("--query", action="append", help="sentence to search for (can repeat)")
     args = parser.parse_args()
 
@@ -92,7 +98,11 @@ def main() -> None:
     # 2a. Near-duplicates: each complaint's closest other complaint
     sims, ids = index.search(vectors, 2)  # [0] is itself, [1] is its nearest neighbour
     dup_pairs = sorted(
-        {tuple(sorted((i, int(ids[i, 1])))) for i in range(len(df)) if sims[i, 1] >= args.dup_threshold}
+        {
+            tuple(sorted((i, int(ids[i, 1]))))
+            for i in range(len(df))
+            if sims[i, 1] >= args.dup_threshold
+        }
     )
     print("=" * 70)
     print(f"NEAR-DUPLICATES (similarity >= {args.dup_threshold}): {len(dup_pairs)} pairs")
@@ -104,20 +114,24 @@ def main() -> None:
     q_sims, q_ids = index.search(q_vecs, 3)
     print("\n" + "=" * 70)
     print("SIMILAR-COMPLAINT SEARCH (top 3)")
-    for q, row_s, row_i in zip(queries, q_sims, q_ids):
+    for q, row_s, row_i in zip(queries, q_sims, q_ids, strict=True):
         print(f"\n  Query: {q}")
-        for s, i in zip(row_s, row_i):
+        for s, i in zip(row_s, row_i, strict=True):
             print(f"    {s:.2f}  [{df.loc[i, 'our_label']}] {texts[i][:70]}")
 
     # 3. DBSCAN groups
-    labels = DBSCAN(eps=args.eps, min_samples=args.min_samples, metric="cosine").fit_predict(vectors)
+    labels = DBSCAN(eps=args.eps, min_samples=args.min_samples, metric="cosine").fit_predict(
+        vectors
+    )
     df["group"] = labels
     sizes = Counter(labels[labels != -1])
     n_noise = int((labels == -1).sum())
 
     print("\n" + "=" * 70)
     print(f"DBSCAN GROUPS  eps={args.eps}  min_samples={args.min_samples}")
-    print(f"{len(sizes)} groups | {len(df) - n_noise} complaints in groups | {n_noise} one-off (noise)")
+    print(
+        f"{len(sizes)} groups | {len(df) - n_noise} complaints in groups | {n_noise} one-off (noise)"
+    )
 
     groups_info, pure_total = [], 0
     for g, size in sizes.most_common():
@@ -125,16 +139,27 @@ def main() -> None:
         main_cat, main_n = Counter(members["our_label"]).most_common(1)[0]
         pure_total += main_n
         n_genuine = int((members["source"] == "real").sum())
-        groups_info.append({"group": int(g), "size": int(size), "main_category": main_cat,
-                            "purity": round(main_n / size, 3), "genuine": n_genuine})
-        print(f"\n  Group {g}: {size} complaints | mostly {main_cat} ({main_n}/{size}) | genuine {n_genuine}")
+        groups_info.append(
+            {
+                "group": int(g),
+                "size": int(size),
+                "main_category": main_cat,
+                "purity": round(main_n / size, 3),
+                "genuine": n_genuine,
+            }
+        )
+        print(
+            f"\n  Group {g}: {size} complaints | mostly {main_cat} ({main_n}/{size}) | genuine {n_genuine}"
+        )
         for _, r in members.iterrows():
             print(f"    [{r['our_label'][:12]:12s}] {r['text'][:70]}")
 
     in_groups = len(df) - n_noise
     purity = round(pure_total / in_groups, 3) if in_groups else 0.0
     print("\n" + "=" * 70)
-    print(f"Purity (share of grouped complaints matching their group's main category): {purity:.3f}")
+    print(
+        f"Purity (share of grouped complaints matching their group's main category): {purity:.3f}"
+    )
 
     # 4. Save
     Path(args.groups_out).parent.mkdir(parents=True, exist_ok=True)
@@ -142,7 +167,7 @@ def main() -> None:
     metrics = {
         "data": args.data,
         "model": args.model_name,
-        "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "eps": args.eps,
         "min_samples": args.min_samples,
         "n_complaints": int(len(df)),
@@ -157,8 +182,10 @@ def main() -> None:
     print(f"Saved groups  -> {args.groups_out}  (git-ignored)")
     print(f"Saved index   -> {out_dir / 'real_v1.faiss'}  (git-ignored)")
     print(f"Saved metrics -> {out_dir / 'cluster_metrics.json'}")
-    print(f"\nSUMMARY  groups={len(sizes)}  grouped={in_groups}  noise={n_noise}  "
-          f"purity={purity:.3f}  near_dups={len(dup_pairs)}")
+    print(
+        f"\nSUMMARY  groups={len(sizes)}  grouped={in_groups}  noise={n_noise}  "
+        f"purity={purity:.3f}  near_dups={len(dup_pairs)}"
+    )
 
 
 if __name__ == "__main__":

@@ -24,7 +24,9 @@ def find_problems(settings) -> list[str]:
 
     secret = settings.JWT_SECRET_KEY
     if secret in KNOWN_PUBLIC_SECRETS:
-        problems.append("JWT_SECRET_KEY is a value published in this repository - generate a new random one")
+        problems.append(
+            "JWT_SECRET_KEY is a value published in this repository - generate a new random one"
+        )
     elif len(secret) < 32:
         problems.append("JWT_SECRET_KEY is shorter than 32 characters")
 
