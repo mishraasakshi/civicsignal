@@ -52,8 +52,13 @@ trap 'rm -rf "$WORK"' EXIT
 # Built on this computer: Azure for Students does not allow building inside Azure (ACR Tasks).
 echo "3/5 Building the container on this Mac and uploading it (15-30 minutes the first time)..."
 docker build --platform linux/amd64 -t "$IMAGE" "$WORK/civicsignal"
-az acr login -n "$ACR" --only-show-errors
-docker push "$IMAGE"
+# Big uploads can time out on slower connections: retry (finished layers are not re-sent)
+for ATTEMPT in 1 2 3 4 5 6; do
+  az acr login -n "$ACR" --only-show-errors && docker push "$IMAGE" && break
+  [ "$ATTEMPT" = 6 ] && { echo "Upload failed 6 times - check the internet and run this script again"; exit 1; }
+  echo "Upload interrupted - retrying in 15 seconds (attempt $((ATTEMPT + 1)) of 6)..."
+  sleep 15
+done
 
 DOMAIN="$(az containerapp env show -n "$ENVIRONMENT" -g "$RG" --query properties.defaultDomain -o tsv)"
 APP_URL="https://$APP.$DOMAIN"
