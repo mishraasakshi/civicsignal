@@ -149,6 +149,25 @@ export function createComplaint(body: NewComplaint): Promise<Complaint> {
   return request<Complaint>('/api/complaints', { method: 'POST', json: body })
 }
 
-export function listComplaints(): Promise<ComplaintList> {
-  return request<ComplaintList>('/api/complaints?limit=50')
+export interface ComplaintFilters {
+  category?: Category
+  status?: Status
+  needs_review?: boolean
+  limit?: number
+}
+
+export function listComplaints(filters: ComplaintFilters = {}): Promise<ComplaintList> {
+  const params = new URLSearchParams({ limit: String(filters.limit ?? 50) })
+  if (filters.category) params.set('category', filters.category)
+  if (filters.status) params.set('status', filters.status)
+  if (filters.needs_review !== undefined) params.set('needs_review', String(filters.needs_review))
+  return request<ComplaintList>(`/api/complaints?${params}`)
+}
+
+/** Supervisors only: correct the category and/or move the status. */
+export function updateComplaint(
+  id: number,
+  changes: { category?: Category; status?: Status },
+): Promise<Complaint> {
+  return request<Complaint>(`/api/complaints/${id}`, { method: 'PATCH', json: changes })
 }

@@ -1,6 +1,7 @@
 import { useAuth } from './auth/context'
 import { LoginPage } from './pages/LoginPage'
 import { StudentHome } from './pages/StudentHome'
+import { SupervisorDashboard } from './pages/SupervisorDashboard'
 
 function App() {
   const { user, loading, logout } = useAuth()
@@ -29,14 +30,7 @@ function App() {
       </header>
 
       <main className="content">
-        {isSupervisor ? (
-          <>
-            <h1>Supervisor dashboard</h1>
-            <p className="muted">Coming next: review queue, filters and status updates.</p>
-          </>
-        ) : (
-          <StudentHome />
-        )}
+        {isSupervisor ? <SupervisorDashboard /> : <StudentHome />}
       </main>
     </div>
   )

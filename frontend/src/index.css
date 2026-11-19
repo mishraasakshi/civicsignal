@@ -423,3 +423,159 @@ h2 {
 .form .row > label {
   min-width: 0;
 }
+
+/* ---- Login extras ---- */
+.password-box {
+  position: relative;
+}
+
+.password-box input {
+  padding-right: 4.5rem;
+}
+
+.show-btn {
+  position: absolute;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+}
+
+.link-btn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ---- Supervisor dashboard ---- */
+.content:has(.dash-head) {
+  max-width: 1000px;
+}
+
+.dash-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.dash-head h1 {
+  margin: 0;
+}
+
+.view-tabs {
+  margin: 0;
+  min-width: 320px;
+}
+
+.count {
+  display: inline-block;
+  min-width: 1.5em;
+  margin-left: 0.35rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  font-size: 0.8rem;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+label.inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+label.inline select,
+.filters select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 400;
+}
+
+.complaint.review {
+  border-left: 4px solid var(--warn-text);
+}
+
+.tag-warn {
+  border-color: var(--warn-text);
+  color: var(--warn-text);
+}
+
+.sup-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.ai-guess {
+  flex: 1 1 260px;
+}
+
+.moves {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+
+.small-btn {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.65rem;
+}
+
+.small-btn.move {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.complaint .error {
+  margin-top: 0.6rem;
+}
+
+.filters {
+  padding: 0.6rem 0.8rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+.filters-title {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* Tabs that are not selected still look clickable */
+.tab:not(.active):hover {
+  color: var(--text);
+  background: var(--accent-bg);
+}

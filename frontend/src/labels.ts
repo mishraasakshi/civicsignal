@@ -48,3 +48,30 @@ export function formatDate(iso: string): string {
     minute: '2-digit',
   })
 }
+
+export const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[]
+
+export const STATUSES: Status[] = [
+  'Submitted',
+  'Under Review',
+  'Needs More Information',
+  'Assigned',
+  'In Progress',
+  'Resolved',
+  'Closed',
+]
+
+/**
+ * Which status a complaint can move to next.
+ * Copy of backend/app/services/workflow.py - the backend still checks every move (409 if not allowed),
+ * this copy only decides which buttons to show.
+ */
+export const NEXT_STATUSES: Record<Status, Status[]> = {
+  Submitted: ['Under Review', 'Assigned', 'Needs More Information', 'Closed'],
+  'Under Review': ['Assigned', 'Needs More Information', 'Closed'],
+  'Needs More Information': ['Under Review', 'Closed'],
+  Assigned: ['In Progress', 'Closed'],
+  'In Progress': ['Resolved', 'Assigned'],
+  Resolved: ['Closed', 'In Progress'],
+  Closed: [],
+}

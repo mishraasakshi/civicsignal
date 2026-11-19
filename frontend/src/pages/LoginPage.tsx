@@ -10,16 +10,20 @@ export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
 
   function switchMode(next: Mode) {
     setMode(next)
     setError(null)
+    setAlreadyRegistered(false)
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault() // stop the browser from reloading the page
     setError(null)
+    setAlreadyRegistered(false)
 
     if (mode === 'register' && password.length < 8) {
       setError('Password must be at least 8 characters.')
@@ -32,7 +36,10 @@ export function LoginPage() {
       else await register(email, password)
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) setError('Wrong email or password.')
-      else if (err instanceof ApiError && err.status === 409) setError('This email is already registered. Log in instead.')
+      else if (err instanceof ApiError && err.status === 409) {
+        setError('This email is already registered.')
+        setAlreadyRegistered(true)
+      }
       else if (err instanceof ApiError) setError(err.message)
       else setError('Something went wrong. Please try again.')
     } finally {
@@ -85,19 +92,34 @@ export function LoginPage() {
 
           <label>
             Password
-            <input
-              type="password"
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={mode === 'register' ? 'At least 8 characters' : ''}
-            />
+            <div className="password-box">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={mode === 'register' ? 'At least 8 characters' : ''}
+              />
+              <button
+                type="button"
+                className="show-btn"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
           </label>
 
           {error && (
             <p className="error" role="alert">
-              {error}
+              {error}{' '}
+              {alreadyRegistered && (
+                <button type="button" className="link-btn" onClick={() => switchMode('login')}>
+                  Log in instead →
+                </button>
+              )}
             </p>
           )}
 
