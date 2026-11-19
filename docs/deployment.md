@@ -47,7 +47,9 @@ gives each visitor's real IP to the rate limiter.
 
 ## 2. Azure (one time)
 
-1. Activate **Azure for Students** (no credit card; verify with your school email):
+1. Activate **Azure for Students** (no credit card; verify with your school email). Docker
+   Desktop must be running: the image is built locally, because student subscriptions may not
+   build inside Azure (ACR Tasks).
    https://azure.microsoft.com/free/students
 2. Install and sign in to the CLI:
 
@@ -67,7 +69,7 @@ to students in India. Override with `LOCATION=<region> ./scripts/deploy_azure.sh
 ```
 
 The first run creates the resource group `civicsignal-rg`, a private container registry and the
-Container Apps environment, then builds the image in Azure (about 10-15 minutes the first time)
+Container Apps environment, then builds the image on your computer and uploads it (15-30 minutes the first time)
 and starts the app at `https://civicsignal.<environment-domain>.eastasia.azurecontainerapps.io`.
 Run the same command again to ship a new version.
 

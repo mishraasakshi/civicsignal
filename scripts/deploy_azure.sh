@@ -5,8 +5,8 @@
 #   ./scripts/deploy_azure.sh     # first deploy, and every update after that
 #
 # The first run also creates the resource group, a private container registry and the
-# Container Apps environment. Only the clean folder made by export_container.sh is uploaded
-# (no data, no tests, no .env). Secrets come from ~/.civicsignal/prod-secrets.env and are
+# Container Apps environment. The image is built on this computer (Docker Desktop) from the
+# clean folder made by export_container.sh (no data, no tests, no .env) and pushed to the registry. Secrets come from ~/.civicsignal/prod-secrets.env and are
 # stored as Container Apps secrets - they are never printed.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -20,6 +20,7 @@ ENVIRONMENT=civicsignal-env
 APP=civicsignal
 
 az account show -o none 2>/dev/null || { echo "Not signed in to Azure - run: az login"; exit 1; }
+docker info >/dev/null 2>&1 || { echo "Docker is not running - start Docker Desktop first"; exit 1; }
 [ -f "$SECRETS_FILE" ] || { echo "Missing $SECRETS_FILE"; exit 1; }
 secret() { grep "^$1=" "$SECRETS_FILE" | cut -d= -f2-; }
 for NAME in DATABASE_URL DATABASE_READONLY_URL JWT_SECRET_KEY; do
@@ -48,8 +49,11 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 ./scripts/export_container.sh "$WORK/civicsignal"
 
-echo "3/5 Building the container in Azure (10-15 minutes the first time)..."
-az acr build -r "$ACR" -t "civicsignal:$TAG" --platform linux/amd64 "$WORK/civicsignal" -o none
+# Built on this computer: Azure for Students does not allow building inside Azure (ACR Tasks).
+echo "3/5 Building the container on this Mac and uploading it (15-30 minutes the first time)..."
+docker build --platform linux/amd64 -t "$IMAGE" "$WORK/civicsignal"
+az acr login -n "$ACR" --only-show-errors
+docker push "$IMAGE"
 
 DOMAIN="$(az containerapp env show -n "$ENVIRONMENT" -g "$RG" --query properties.defaultDomain -o tsv)"
 APP_URL="https://$APP.$DOMAIN"
@@ -81,8 +85,9 @@ fi
 unset SECRETS
 
 echo "5/5 Removing old images (keeping the newest 2)..."
-az acr run -r "$ACR" --cmd "acr purge --filter 'civicsignal:.*' --keep 2 --ago 0d --untagged" \
-  /dev/null -o none 2>/dev/null || echo "(note: old-image clean-up skipped - not critical)"
+for OLD in $(az acr repository show-tags -n "$ACR" --repository civicsignal --orderby time_desc -o tsv | tail -n +3); do
+  az acr repository delete -n "$ACR" --image "civicsignal:$OLD" --yes -o none
+done
 
 echo
 echo "CivicSignal is live: $APP_URL"
