@@ -7,6 +7,7 @@ from datetime import timedelta
 
 from app.api.deps import get_current_user
 from app.core import rate_limit
+from app.core.client_ip import client_ip
 from app.core.config import settings
 from app.core.security import DUMMY_HASH, create_access_token, hash_password, verify_password
 from app.db.session import get_db
@@ -18,12 +19,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-
-
-def client_ip(request: Request) -> str:
-    """The caller's IP address. (Behind a proxy in production this needs the proxy's forwarded
-    address instead - to be configured at deployment.)"""
-    return request.client.host if request.client else "unknown"
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)

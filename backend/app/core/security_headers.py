@@ -13,6 +13,13 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
 API_CSP = "default-src 'none'; frame-ancestors 'none'"
+# The website (when the backend serves it): only our own files + Google Fonts, no inline scripts
+PAGE_CSP = (
+    "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; "
+    "font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; "
+    "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+)
+API_PATHS = ("/api", "/health", "/openapi.json")
 DOCS_CSP = (
     "default-src 'self'; img-src 'self' data: https://fastapi.tiangolo.com; "
     "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
@@ -34,8 +41,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         h.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         h.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
         h.setdefault("Cross-Origin-Opener-Policy", "same-origin")
-        is_docs = request.url.path.startswith(DOCS_PATHS)
-        h.setdefault("Content-Security-Policy", DOCS_CSP if is_docs else API_CSP)
+        path = request.url.path
+        if path.startswith(DOCS_PATHS):
+            csp = DOCS_CSP
+        elif path.startswith(API_PATHS):
+            csp = API_CSP
+        else:
+            csp = PAGE_CSP  # the website and its files
+        h.setdefault("Content-Security-Policy", csp)
         if self.https_only:
             h.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         return response

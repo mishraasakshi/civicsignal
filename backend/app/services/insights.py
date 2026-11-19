@@ -1,31 +1,45 @@
-"""Read the repeated-problem groups made offline by the ML scripts.
+"""Repeated-problem groups, stored in the database.
 
-The groups come from:
+They are made offline by the ML pipeline:
     ml/models/cluster_complaints.py   (MiniLM embeddings + DBSCAN -> groups)
     ml/models/summarize_groups.py     (Groq LLM -> title, summary, urgency, action)
-They are saved to data/processed/real_group_summaries_v1.json (git-ignored).
+and copied into the database with backend/scripts/import_group_summaries.py.
+Only the summaries are stored - never complaint ids or complaint text.
 """
 
-import json
-from datetime import UTC, datetime
-from pathlib import Path
+from datetime import datetime
 
-from app.ml.classifier import PROJECT_ROOT
+from app.models.group_insight import GroupInsight
+from app.schemas.insights import GroupInsight as GroupInsightIn
+from sqlalchemy import delete, select
+from sqlalchemy.orm import Session
 
-SUMMARIES_PATH = PROJECT_ROOT / "data" / "processed" / "real_group_summaries_v1.json"
 URGENCY_ORDER = {"high": 0, "medium": 1, "low": 2}
 
 
-def summaries_path() -> Path:
-    """FastAPI dependency (tests swap in a temporary file)."""
-    return SUMMARIES_PATH
+def load_groups(db: Session) -> list[GroupInsight]:
+    """All groups, most urgent and biggest first (empty list if none imported)."""
+    rows = db.scalars(select(GroupInsight)).all()
+    return sorted(rows, key=lambda g: (URGENCY_ORDER.get(g.urgency, 9), -g.size, g.group_no))
 
 
-def load_groups(path: Path) -> tuple[list[dict], datetime] | None:
-    """Return (groups, when the file was made), most urgent and biggest first. None if not generated yet."""
-    if not path.exists():
-        return None
-    groups = json.loads(path.read_text(encoding="utf-8"))
-    groups.sort(key=lambda g: (URGENCY_ORDER.get(g.get("urgency"), 9), -int(g.get("size", 0))))
-    made_at = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
-    return groups, made_at
+def replace_groups(db: Session, groups: list[dict], source: str, generated_at: datetime) -> int:
+    """Swap the stored groups for a new set in one transaction. Returns how many were stored."""
+    valid = [GroupInsightIn.model_validate(g) for g in groups]  # also drops extra fields like ids
+    db.execute(delete(GroupInsight))
+    db.add_all(
+        GroupInsight(
+            group_no=g.group,
+            size=g.size,
+            title=g.title,
+            summary=g.summary,
+            category=g.category,
+            urgency=g.urgency,
+            suggested_action=g.suggested_action,
+            source=source,
+            generated_at=generated_at,
+        )
+        for g in valid
+    )
+    db.commit()
+    return len(valid)

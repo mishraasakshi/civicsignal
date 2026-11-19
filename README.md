@@ -108,6 +108,8 @@ First-time setup:
 cp .env.example .env                                         # then fill in the values
 backend/venv/bin/alembic -c backend/alembic.ini upgrade head # create / update tables
 backend/venv/bin/python backend/scripts/create_supervisor.py --email you@example.com
+backend/venv/bin/python backend/scripts/backfill_embeddings.py     # "similar complaints" for older rows
+backend/venv/bin/python backend/scripts/import_group_summaries.py  # AI group summaries into the DB
 cd frontend && npm install
 ```
 
@@ -118,6 +120,8 @@ backend/venv/bin/python -m pytest backend -q                 # backend tests
 backend/venv/bin/python backend/scripts/check_readonly_role.py
 cd frontend && npm run lint && npm run build                 # frontend checks
 ```
+
+Deployment (Hugging Face Spaces + Neon): see [docs/deployment.md](docs/deployment.md).
 
 ## Implementation Roadmap Checkpoints
 

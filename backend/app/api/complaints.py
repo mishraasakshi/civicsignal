@@ -37,7 +37,8 @@ def create_complaint(
     clf: ComplaintClassifier = Depends(classifier_dependency),
     user: User = Depends(get_current_user),
 ):
-    p = clf.predict(body.text)
+    vector = clf.encode([body.text])[0]  # the text's meaning, computed once
+    p = clf.predict_vector(vector)
     complaint = Complaint(
         text=body.text,
         location=body.location,
@@ -47,6 +48,7 @@ def create_complaint(
         needs_review=p.needs_review,
         category=p.category,  # starts as the AI's guess; a supervisor can change it later
         reporter_id=user.id,
+        embedding=vector.astype("float32").tobytes(),  # kept for "similar complaints"
     )
     db.add(complaint)
     db.commit()

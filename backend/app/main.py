@@ -90,15 +90,17 @@ def health_check():
     }
 
 
-@app.get("/", tags=["Root"])
-def root():
-    return {
-        "app": settings.PROJECT_NAME,
-        "version": settings.VERSION,
-        "status": "operational",
-        "docs": "/docs",
-        "pilot_target": "Amity University Lucknow",
-    }
+if not settings.FRONTEND_DIST:  # when the website is served, "/" is the website instead
+
+    @app.get("/", tags=["Root"])
+    def root():
+        return {
+            "app": settings.PROJECT_NAME,
+            "version": settings.VERSION,
+            "status": "operational",
+            "docs": "/docs",
+            "pilot_target": "Amity University Lucknow",
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -119,3 +121,12 @@ app.include_router(auth_router, prefix=settings.API_V1_STR)
 from app.api.insights import router as insights_router  # noqa: E402
 
 app.include_router(insights_router, prefix=settings.API_V1_STR)
+
+# ---------------------------------------------------------------------------
+# Website (production): serve the built React app from the same address as the API,
+# so the login cookie is first-party and no CORS is needed.
+# ---------------------------------------------------------------------------
+if settings.FRONTEND_DIST:
+    from app.core.frontend import mount_frontend  # noqa: E402
+
+    mount_frontend(app, settings.FRONTEND_DIST)

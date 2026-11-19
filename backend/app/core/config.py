@@ -9,7 +9,11 @@ class Settings(BaseSettings):
     VERSION: str = "2.0.0"
     API_V1_STR: str = "/api"
     ENVIRONMENT: str = "development"
-    ENABLE_DOCS: bool | None = None  # /docs on or off; default: only in development
+    ENABLE_DOCS: bool | None = None
+    TRUSTED_PROXY_HOPS: int = 0  # proxies in front of the app (1 on Hugging Face Spaces)
+    FRONTEND_DIST: str | None = (
+        None  # folder with the built website to serve (production)  # /docs on or off; default: only in development
+    )
 
     # Security
     JWT_SECRET_KEY: str = Field(default="change-me-to-a-secure-random-secret-key-in-production")

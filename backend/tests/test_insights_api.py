@@ -1,10 +1,10 @@
 """GET /api/insights/groups - repeated problems (supervisors only)."""
 
-import json
+from datetime import UTC, datetime
 
 import pytest
-from app.main import app
-from app.services.insights import summaries_path
+from app.models.group_insight import GroupInsight
+from app.services.insights import replace_groups
 
 GROUPS = [
     {
@@ -46,45 +46,63 @@ GROUPS = [
 ]
 
 
+MADE_AT = datetime(2026, 11, 19, 4, 54, tzinfo=UTC)
+
+
 @pytest.fixture
-def summaries_file(tmp_path):
-    path = tmp_path / "groups.json"
-    path.write_text(json.dumps(GROUPS))
-    app.dependency_overrides[summaries_path] = lambda: path
-    return path
+def imported(db_session_factory):
+    with db_session_factory() as db:
+        replace_groups(db, GROUPS, "Pilot survey", MADE_AT)
 
 
-def test_needs_login(client, summaries_file):
+def test_needs_login(client, imported):
     assert client.get("/api/insights/groups").status_code == 401
 
 
-def test_students_are_forbidden(client, auth, summaries_file):
+def test_students_are_forbidden(client, auth, imported):
     r = client.get("/api/insights/groups", headers=auth("student@x.com"))
     assert r.status_code == 403
     assert r.json()["error"]["code"] == "FORBIDDEN"
 
 
-def test_supervisor_gets_groups_most_urgent_first(client, auth, summaries_file):
+def test_supervisor_gets_groups_most_urgent_first(client, auth, imported):
     r = client.get("/api/insights/groups", headers=auth("boss@x.com", role="supervisor"))
     assert r.status_code == 200
     body = r.json()
-    titles = [g["title"] for g in body["groups"]]
-    assert titles == [
+    assert [g["title"] for g in body["groups"]] == [
         "Fan fell",
         "Slow wifi",
         "Token system for mess",
-    ]  # high first, then bigger first
-    assert body["generated_at"]
+    ]
+    assert body["source"] == "Pilot survey"
+    assert body["generated_at"].startswith("2026-11-19T04:54")
 
 
-def test_no_complaint_ids_or_extra_fields_leak(client, auth, summaries_file):
+def test_no_complaint_ids_or_extra_fields_are_stored_or_returned(
+    client, auth, imported, db_session_factory
+):
     r = client.get("/api/insights/groups", headers=auth("boss@x.com", role="supervisor"))
     for g in r.json()["groups"]:
         assert "ids" not in g and "genuine" not in g and "cluster_main_label" not in g
+    assert not hasattr(GroupInsight, "ids")  # the table has no place for complaint ids
 
 
-def test_missing_file_gives_503(client, auth, tmp_path):
-    app.dependency_overrides[summaries_path] = lambda: tmp_path / "nope.json"
+def test_nothing_imported_gives_503(client, auth):
     r = client.get("/api/insights/groups", headers=auth("boss@x.com", role="supervisor"))
     assert r.status_code == 503
-    assert r.json()["error"]["code"] == "SERVICE_UNAVAILABLE"
+    assert "import_group_summaries" in r.json()["error"]["message"]
+
+
+def test_import_replaces_the_previous_set(db_session_factory, imported):
+    with db_session_factory() as db:
+        n = replace_groups(db, GROUPS[:1], "Second survey", MADE_AT)
+        assert n == 1
+        assert db.query(GroupInsight).count() == 1
+
+
+def test_import_rejects_invalid_groups(db_session_factory, imported):
+    bad = [{**GROUPS[0], "urgency": "extreme"}]
+    with db_session_factory() as db, pytest.raises(ValueError):
+        replace_groups(db, bad, "x", MADE_AT)
+    with db_session_factory() as db:
+        assert db.query(GroupInsight).count() == 3  # nothing changed

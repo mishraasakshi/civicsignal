@@ -3,6 +3,7 @@
 Real PostgreSQL, the real model and the network are never used.
 """
 
+import numpy as np
 import pytest
 from app.api.classify import classifier_dependency
 from app.core import rate_limit
@@ -10,21 +11,34 @@ from app.core.security import hash_password
 from app.db.session import Base, get_db
 from app.main import app
 from app.ml.classifier import Prediction
-from app.models import complaint, user  # noqa: F401  (register tables)
+from app.models import complaint, group_insight, user  # noqa: F401  (register tables)
 from app.models.user import User
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+WORDS = ["wifi", "slow", "mess", "token", "geyser", "water"]
+
 
 class FakeClassifier:
+    """Stands in for the real model: 'embeddings' are normalised counts of a few words."""
+
     model_name = "fake-model"
 
-    def predict(self, text: str) -> Prediction:
-        if "wifi" in text.lower():
+    def encode(self, texts: list[str]) -> np.ndarray:
+        v = np.array([[t.lower().count(w) for w in WORDS] for t in texts], dtype="float32") + 1e-6
+        return v / np.linalg.norm(v, axis=1, keepdims=True)
+
+    def predict_vector(self, vector: np.ndarray) -> Prediction:
+        if (
+            vector[WORDS.index("wifi")] > 0.5
+        ):  # clearly about wifi (texts with no known words score ~0.41)
             return Prediction("internet_wifi", 0.9, [("internet_wifi", 0.9)], False)
         return Prediction("cleanliness", 0.3, [("cleanliness", 0.3)], True)
+
+    def predict(self, text: str) -> Prediction:
+        return self.predict_vector(self.encode([text])[0])
 
 
 @pytest.fixture

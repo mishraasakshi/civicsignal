@@ -1,65 +1,63 @@
-"""Find past complaints that mean the same thing as a new one.
+"""Find stored complaints that mean the same thing as a new text.
 
-Same maths as a FAISS flat index (cosine similarity of normalised embeddings), done
-with numpy. This keeps FAISS out of the API process: on macOS, FAISS and PyTorch in one
-process crash. For a few thousand complaints numpy takes well under a millisecond.
+Each complaint's embedding (384 normalised float32 numbers) is saved in the database when
+it is submitted. Searching = cosine similarity between the new text's embedding and all
+stored ones (a dot product, because the vectors are normalised). For thousands of
+complaints numpy does this in a few milliseconds, so no separate vector index is needed.
 """
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from functools import lru_cache
-from pathlib import Path
 
 import numpy as np
-import pandas as pd
-from app.ml.classifier import PROJECT_ROOT, get_classifier
+from app.models.complaint import Complaint
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-DATA_PATH = PROJECT_ROOT / "data" / "processed" / "real_test_v1.csv"  # until the database exists
 DUPLICATE_THRESHOLD = 0.90  # this similar = probably the same complaint sent twice
+EMBEDDING_DTYPE = "float32"
 
 
 @dataclass
 class Match:
-    id: str
+    id: int
     text: str
     category: str
+    status: str
     score: float
 
 
-class SimilarIndex:
-    def __init__(
-        self,
-        ids: list[str],
-        texts: list[str],
-        categories: list[str],
-        encode: Callable[[list[str]], np.ndarray],
-    ):
-        self.ids, self.texts, self.categories = ids, texts, categories
-        self.encode = encode
-        self.vectors = encode(texts).astype("float32")  # one row of 384 numbers per complaint
-
-    def __len__(self) -> int:
-        return len(self.ids)
-
-    def search(self, text: str, k: int = 5, min_score: float = 0.0) -> list[Match]:
-        query = self.encode([text]).astype("float32")[0]
-        scores = self.vectors @ query  # cosine similarity with every stored complaint
-        best = np.argsort(scores)[::-1][:k]
-        return [
-            Match(self.ids[i], self.texts[i], self.categories[i], round(float(scores[i]), 4))
-            for i in best
-            if scores[i] >= min_score
-        ]
+def to_bytes(vector: np.ndarray) -> bytes:
+    return np.asarray(vector, dtype=EMBEDDING_DTYPE).tobytes()
 
 
-@lru_cache(maxsize=1)
-def get_similar_index(data_path: Path = DATA_PATH) -> SimilarIndex:
-    if not data_path.exists():
-        raise FileNotFoundError(f"{data_path} not found")
-    df = pd.read_csv(data_path).fillna("")
-    encoder = get_classifier().encoder  # reuse the model already loaded for /classify
+def search(
+    db: Session,
+    encode: Callable[[list[str]], np.ndarray],
+    text: str,
+    k: int = 5,
+    min_score: float = 0.0,
+) -> tuple[list[Match], int]:
+    """Return (best matches, how many complaints were searched)."""
+    rows = db.execute(
+        select(
+            Complaint.id, Complaint.text, Complaint.category, Complaint.status, Complaint.embedding
+        ).where(Complaint.embedding.is_not(None))
+    ).all()
+    if not rows:
+        return [], 0
 
-    def encode(texts: list[str]) -> np.ndarray:
-        return encoder.encode(texts, batch_size=64, normalize_embeddings=True)
-
-    return SimilarIndex(df["id"].tolist(), df["text"].tolist(), df["our_label"].tolist(), encode)
+    matrix = np.frombuffer(b"".join(r.embedding for r in rows), dtype=EMBEDDING_DTYPE).reshape(
+        len(rows), -1
+    )
+    query = np.asarray(encode([text])[0], dtype=EMBEDDING_DTYPE)
+    scores = matrix @ query  # cosine similarity with every stored complaint
+    best = np.argsort(scores)[::-1][:k]
+    matches = [
+        Match(
+            rows[i].id, rows[i].text, rows[i].category, rows[i].status, round(float(scores[i]), 4)
+        )
+        for i in best
+        if scores[i] >= min_score
+    ]
+    return matches, len(rows)

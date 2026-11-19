@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # backend/ -> "imp
 
 from alembic import context  # noqa: E402
 from app.db.session import Base, database_url  # noqa: E402
-from app.models import complaint, user  # noqa: E402,F401  (registers the tables on Base.metadata)
+from app.models import complaint, group_insight, user  # noqa: E402,F401  (registers the tables)
 from sqlalchemy import engine_from_config, pool  # noqa: E402
 
 config = context.config

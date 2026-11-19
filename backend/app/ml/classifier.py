@@ -39,9 +39,18 @@ class ComplaintClassifier:
 
         self.encoder = SentenceTransformer(self.model_name, device="cpu")
 
+    def encode(self, texts: list[str]) -> np.ndarray:
+        """Texts -> normalised embeddings (one row of 384 numbers per text)."""
+        return self.encoder.encode(texts, batch_size=64, normalize_embeddings=True).astype(
+            "float32"
+        )
+
     def predict(self, text: str) -> Prediction:
-        vector = self.encoder.encode([text], normalize_embeddings=True)
-        probs = self.clf.predict_proba(vector)[0]
+        return self.predict_vector(self.encode([text])[0])
+
+    def predict_vector(self, vector: np.ndarray) -> Prediction:
+        """Classify an embedding that was already computed (so a new complaint is encoded once)."""
+        probs = self.clf.predict_proba(vector.reshape(1, -1))[0]
         best = np.argsort(probs)[::-1][:3]
         top3 = [(str(self.clf.classes_[i]), round(float(probs[i]), 4)) for i in best]
         category, confidence = top3[0]

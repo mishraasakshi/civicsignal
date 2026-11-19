@@ -22,9 +22,10 @@ class SimilarRequest(BaseModel):
 
 
 class SimilarMatch(BaseModel):
-    id: str
+    id: int
     text: str
     category: str
+    status: str
     score: float = Field(description="cosine similarity, 1.0 = same meaning")
 
 
