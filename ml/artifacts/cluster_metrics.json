@@ -1,0 +1,78 @@
+{
+  "data": "data/processed/real_test_v1.csv",
+  "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+  "created_at": "2026-11-19T04:48:48+00:00",
+  "eps": 0.3,
+  "min_samples": 2,
+  "n_complaints": 98,
+  "n_groups": 9,
+  "n_in_groups": 30,
+  "n_noise": 68,
+  "purity": 0.833,
+  "near_duplicate_pairs": 0,
+  "groups": [
+    {
+      "group": 5,
+      "size": 5,
+      "main_category": "mess_food",
+      "purity": 1.0,
+      "genuine": 4
+    },
+    {
+      "group": 8,
+      "size": 5,
+      "main_category": "electrical",
+      "purity": 0.4,
+      "genuine": 5
+    },
+    {
+      "group": 0,
+      "size": 4,
+      "main_category": "internet_wifi",
+      "purity": 0.5,
+      "genuine": 2
+    },
+    {
+      "group": 1,
+      "size": 4,
+      "main_category": "mess_food",
+      "purity": 1.0,
+      "genuine": 4
+    },
+    {
+      "group": 2,
+      "size": 3,
+      "main_category": "water_plumbing",
+      "purity": 1.0,
+      "genuine": 0
+    },
+    {
+      "group": 4,
+      "size": 3,
+      "main_category": "furniture",
+      "purity": 1.0,
+      "genuine": 0
+    },
+    {
+      "group": 3,
+      "size": 2,
+      "main_category": "electrical",
+      "purity": 1.0,
+      "genuine": 0
+    },
+    {
+      "group": 6,
+      "size": 2,
+      "main_category": "internet_wifi",
+      "purity": 1.0,
+      "genuine": 0
+    },
+    {
+      "group": 7,
+      "size": 2,
+      "main_category": "internet_wifi",
+      "purity": 1.0,
+      "genuine": 2
+    }
+  ]
+}
