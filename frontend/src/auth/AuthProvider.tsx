@@ -18,6 +18,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false))
   }, [])
 
+  // If any request finds the login has expired, go back to the login page
+  useEffect(() => {
+    const onExpired = () => setUser(null)
+    window.addEventListener(api.SESSION_EXPIRED_EVENT, onExpired)
+    return () => window.removeEventListener(api.SESSION_EXPIRED_EVENT, onExpired)
+  }, [])
+
   async function login(email: string, password: string) {
     await api.login(email, password)
     setUser(await api.fetchMe())

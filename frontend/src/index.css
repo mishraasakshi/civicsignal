@@ -258,3 +258,168 @@ button.ghost:hover {
   margin: 0 auto;
   padding: 2rem 1rem;
 }
+
+/* ---- Shared pieces ---- */
+h2 {
+  font-size: 1.15rem;
+  margin: 0 0 0.75rem;
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: var(--shadow);
+}
+
+.form textarea,
+.form select {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 400;
+  resize: vertical;
+}
+
+.form textarea:focus,
+.form select:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.form .row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.optional,
+.counter {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.notice {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  background: var(--accent-bg);
+  border: 1px solid var(--primary);
+}
+
+/* ---- Student page ---- */
+.content:has(.student-grid) {
+  max-width: 1100px;
+}
+
+.student-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.complaint {
+  padding: 1rem 1.1rem;
+}
+
+.complaint.highlight {
+  border-color: var(--primary);
+}
+
+.complaint-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.complaint-text {
+  margin: 0.6rem 0;
+  overflow-wrap: anywhere;
+}
+
+.complaint p.small {
+  margin: 0.5rem 0 0;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tag {
+  font-size: 0.8rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.status {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+}
+
+.status-new {
+  background: #e4ecfb;
+  color: #2952a3;
+}
+
+.status-active {
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.status-done {
+  background: var(--accent-bg);
+  color: var(--primary);
+}
+
+.status-attention {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+@media (prefers-color-scheme: dark) {
+  .status-new {
+    background: #1d2a44;
+    color: #8fb0f0;
+  }
+}
+
+@media (max-width: 800px) {
+  .student-grid,
+  .form .row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Inputs never grow wider than their column */
+.form input,
+.form select,
+.form textarea {
+  width: 100%;
+  min-width: 0;
+}
+
+.form .row > label {
+  min-width: 0;
+}

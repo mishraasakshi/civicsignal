@@ -4,6 +4,7 @@
 // When deployed, set VITE_API_URL to the backend's address.
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 const TOKEN_KEY = 'civicsignal_token'
+export const SESSION_EXPIRED_EVENT = 'civicsignal:session-expired'
 
 export type Role = 'reporter' | 'supervisor'
 
@@ -60,6 +61,13 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   const data = await response.json().catch(() => null)
+
+  // Saved login expired or became invalid: forget it and tell the app to show the login page
+  if (response.status === 401 && token) {
+    tokenStore.clear()
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+  }
+
   if (!response.ok) {
     const err = data?.error
     throw new ApiError(
@@ -87,4 +95,60 @@ export function register(email: string, password: string): Promise<User> {
 
 export function fetchMe(): Promise<User> {
   return request<User>('/api/auth/me')
+}
+
+// ---- Complaints ----
+
+export type Category =
+  | 'water_plumbing'
+  | 'electrical'
+  | 'cleanliness'
+  | 'internet_wifi'
+  | 'furniture'
+  | 'mess_food'
+  | 'security'
+  | 'other'
+
+export type Status =
+  | 'Submitted'
+  | 'Under Review'
+  | 'Assigned'
+  | 'In Progress'
+  | 'Resolved'
+  | 'Closed'
+  | 'Needs More Information'
+
+export type Urgency = 'low' | 'medium' | 'high'
+
+export interface Complaint {
+  id: number
+  text: string
+  location: string | null
+  urgency_reported: Urgency | null
+  predicted_category: Category // the AI's guess (never changes)
+  confidence: number // 0..1, how sure the AI was
+  needs_review: boolean // true = a supervisor should check the category
+  category: Category // current category (AI guess, or a supervisor's correction)
+  status: Status
+  created_at: string
+  updated_at: string
+}
+
+export interface ComplaintList {
+  total: number
+  items: Complaint[]
+}
+
+export interface NewComplaint {
+  text: string
+  location?: string
+  urgency?: Urgency
+}
+
+export function createComplaint(body: NewComplaint): Promise<Complaint> {
+  return request<Complaint>('/api/complaints', { method: 'POST', json: body })
+}
+
+export function listComplaints(): Promise<ComplaintList> {
+  return request<ComplaintList>('/api/complaints?limit=50')
 }

@@ -1,5 +1,6 @@
 import { useAuth } from './auth/context'
 import { LoginPage } from './pages/LoginPage'
+import { StudentHome } from './pages/StudentHome'
 
 function App() {
   const { user, loading, logout } = useAuth()
@@ -28,15 +29,14 @@ function App() {
       </header>
 
       <main className="content">
-        <h1>Welcome 👋</h1>
-        <p>
-          You're logged in as <strong>{user.email}</strong>.
-        </p>
-        <p className="muted">
-          {isSupervisor
-            ? 'Next step: the supervisor dashboard (review queue, filters, status updates).'
-            : 'Next step: submit a complaint and track its status.'}
-        </p>
+        {isSupervisor ? (
+          <>
+            <h1>Supervisor dashboard</h1>
+            <p className="muted">Coming next: review queue, filters and status updates.</p>
+          </>
+        ) : (
+          <StudentHome />
+        )}
       </main>
     </div>
   )
