@@ -4,9 +4,9 @@ import type { User } from '../api'
 export interface AuthState {
   user: User | null
   loading: boolean // true while we check a saved login on page load
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string, remember?: boolean) => Promise<void>
   register: (email: string, password: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   notice: string | null // short success message shown after login / sign-up
   clearNotice: () => void
 }

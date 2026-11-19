@@ -1,5 +1,6 @@
 import type { Complaint } from '../api'
-import { CATEGORY_LABELS, STATUS_HELP, STATUS_TONE, URGENCY_LABELS, formatDate } from '../labels'
+import { ProgressTracker } from './ProgressTracker'
+import { CATEGORY_LABELS, STATUS_HELP, STATUS_TONE, URGENCY_LABELS, formatDate, stageIndex } from '../labels'
 
 interface Props {
   complaint: Complaint
@@ -20,9 +21,15 @@ export function ComplaintCard({ complaint: c, highlight = false }: Props) {
 
       <div className="tags">
         <span className="tag">{CATEGORY_LABELS[c.category]}</span>
-        {c.location && <span className="tag">📍 {c.location}</span>}
+        {c.location && <span className="tag">{c.location}</span>}
         {c.urgency_reported && <span className="tag">Urgency: {URGENCY_LABELS[c.urgency_reported]}</span>}
       </div>
+
+      <ProgressTracker
+        current={stageIndex(c.status)}
+        allDone={c.status === 'Resolved' || c.status === 'Closed'}
+        dates={[formatDate(c.created_at)]}
+      />
 
       <p className="muted small">
         {STATUS_HELP[c.status]}

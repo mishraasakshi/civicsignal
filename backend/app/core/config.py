@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = Field(default="change-me-to-a-secure-random-secret-key-in-production")
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
+    REMEMBER_ME_DAYS: int = 30  # how long "Remember me" keeps you logged in
+    SESSION_COOKIE_NAME: str = "cs_session"
 
     # Database URLs
     DATABASE_URL: str = Field(default="postgresql://civicuser:civicpassword@localhost:5432/civicsignal")

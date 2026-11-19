@@ -3,7 +3,6 @@
 // In development this is '' (Vite forwards /api to localhost:8000).
 // When deployed, set VITE_API_URL to the backend's address.
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
-const TOKEN_KEY = 'civicsignal_token'
 export const SESSION_EXPIRED_EVENT = 'civicsignal:session-expired'
 
 export type Role = 'reporter' | 'supervisor'
@@ -27,10 +26,18 @@ export class ApiError extends Error {
   }
 }
 
-export const tokenStore = {
-  get: () => localStorage.getItem(TOKEN_KEY),
-  set: (token: string) => localStorage.setItem(TOKEN_KEY, token),
-  clear: () => localStorage.removeItem(TOKEN_KEY),
+// The login session lives in an httpOnly cookie set by the backend.
+// JavaScript never sees or stores the token, so an XSS bug can't steal it.
+// (Older versions kept it in localStorage - remove that copy if it is still there.)
+try {
+  localStorage.removeItem('civicsignal_token')
+} catch {
+  /* storage blocked: nothing to clean up */
+}
+
+let loggedIn = false // so a 401 is only treated as "session expired" for someone who was logged in
+export function setLoggedIn(value: boolean) {
+  loggedIn = value
 }
 
 interface RequestOptions {
@@ -50,21 +57,23 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     body = new URLSearchParams(options.form)
   }
 
-  const token = tokenStore.get()
-  if (token) headers['Authorization'] = `Bearer ${token}`
-
   let response: Response
   try {
-    response = await fetch(`${BASE_URL}${path}`, { method: options.method ?? 'GET', headers, body })
+    response = await fetch(`${BASE_URL}${path}`, {
+      method: options.method ?? 'GET',
+      headers,
+      body,
+      credentials: 'include', // send the session cookie
+    })
   } catch {
     throw new ApiError(0, 'NETWORK_ERROR', 'Cannot reach the server. Is the backend running?')
   }
 
-  const data = await response.json().catch(() => null)
+  const data = response.status === 204 ? null : await response.json().catch(() => null)
 
-  // Saved login expired or became invalid: forget it and tell the app to show the login page
-  if (response.status === 401 && token) {
-    tokenStore.clear()
+  // Session expired or became invalid: tell the app to show the login page
+  if (response.status === 401 && loggedIn) {
+    loggedIn = false
     window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
   }
 
@@ -81,12 +90,16 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
 // ---- Auth endpoints ----
 
-export async function login(email: string, password: string): Promise<void> {
-  const res = await request<{ access_token: string }>('/api/auth/login', {
+/** Log in. The backend answers with an httpOnly session cookie (30 days if remember is true). */
+export async function login(email: string, password: string, remember = false): Promise<void> {
+  await request<unknown>('/api/auth/login', {
     method: 'POST',
-    form: { username: email, password },
+    form: { username: email, password, remember: String(remember) },
   })
-  tokenStore.set(res.access_token)
+}
+
+export async function logout(): Promise<void> {
+  await request<null>('/api/auth/logout', { method: 'POST' })
 }
 
 export function register(email: string, password: string): Promise<User> {

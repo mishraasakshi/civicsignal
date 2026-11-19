@@ -40,3 +40,35 @@ def test_wrong_password_and_unknown_email_look_the_same(client, make_user):
 def test_bad_or_missing_token(client):
     assert client.get("/api/auth/me").status_code == 401
     assert client.get("/api/auth/me", headers={"Authorization": "Bearer garbage"}).status_code == 401
+
+
+def test_login_sets_httponly_session_cookie(client, make_user):
+    make_user("cookie@x.co")
+    r = client.post("/api/auth/login", data={"username": "cookie@x.co", "password": "password123"})
+    assert r.status_code == 200
+    set_cookie = r.headers["set-cookie"].lower()
+    assert "cs_session=" in set_cookie and "httponly" in set_cookie and "samesite=lax" in set_cookie
+    assert "max-age" not in set_cookie  # not remembered: ends with the browser session
+    # the browser (TestClient keeps cookies) is now logged in without any Authorization header
+    assert client.get("/api/auth/me").json()["email"] == "cookie@x.co"
+
+
+def test_remember_me_keeps_cookie_for_30_days(client, make_user):
+    make_user("keep@x.co")
+    r = client.post("/api/auth/login", data={"username": "keep@x.co", "password": "password123", "remember": "true"})
+    assert r.status_code == 200
+    assert f"max-age={30 * 24 * 3600}" in r.headers["set-cookie"].lower()
+
+
+def test_logout_clears_cookie(client, make_user):
+    make_user("bye@x.co")
+    client.post("/api/auth/login", data={"username": "bye@x.co", "password": "password123"})
+    assert client.get("/api/auth/me").status_code == 200
+    r = client.post("/api/auth/logout")
+    assert r.status_code == 204
+    assert client.get("/api/auth/me").status_code == 401
+
+
+def test_bad_cookie_is_rejected(client):
+    client.cookies.set("cs_session", "not-a-real-token")
+    assert client.get("/api/auth/me").status_code == 401

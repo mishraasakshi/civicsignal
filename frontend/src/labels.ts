@@ -75,3 +75,24 @@ export const NEXT_STATUSES: Record<Status, Status[]> = {
   Resolved: ['Closed', 'In Progress'],
   Closed: [],
 }
+
+// ---- 4-stage progress tracker ----
+
+export const STAGES = ['Submitted', 'Under Review', 'In Progress', 'Resolved'] as const
+
+/** Which of the 4 stages a real complaint status belongs to. */
+export function stageIndex(status: Status): number {
+  switch (status) {
+    case 'Submitted':
+      return 0
+    case 'Under Review':
+    case 'Needs More Information':
+      return 1
+    case 'Assigned':
+    case 'In Progress':
+      return 2
+    case 'Resolved':
+    case 'Closed':
+      return 3
+  }
+}

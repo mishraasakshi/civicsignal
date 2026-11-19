@@ -1,13 +1,17 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import { AuthCard, type Mode } from '../components/AuthCard'
-import { Logo } from '../components/Logo'
+import { CampusIllustration } from '../components/CampusIllustration'
+import { Brand } from '../components/Logo'
 import { PolicyDialog, type Policy } from '../components/PolicyDialog'
+import { ProgressTracker } from '../components/ProgressTracker'
+import { CONTACT_EMAIL } from '../config'
 
-/** Landing page for visitors who are not logged in: header, hero with the login card, how it works, footer. */
+/** Landing page for visitors who are not logged in. */
 export function LoginPage() {
   const [mode, setMode] = useState<Mode>(() => (window.location.hash === '#signup' ? 'register' : 'login'))
   const [policy, setPolicy] = useState<Policy | null>(null)
   const [announcement, setAnnouncement] = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
 
   // After logging in this page closes: remove #signin / #signup from the address bar
   useEffect(() => {
@@ -16,207 +20,237 @@ export function LoginPage() {
     }
   }, [])
 
-  // "Sign in" / "Get started" / footer links: open the card in the right mode and put the cursor in it
-  function openAuth(next: Mode) {
+  // Close the mobile menu with Escape
+  useEffect(() => {
+    if (!menuOpen) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [menuOpen])
+
+  /** Open the login card in the right mode and put the cursor in it. */
+  function openAuth(next: Mode, message?: string) {
     return (e: MouseEvent) => {
       e.preventDefault()
+      setMenuOpen(false)
       setMode(next)
       window.history.replaceState(null, '', next === 'register' ? '#signup' : '#signin')
       document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      window.setTimeout(() => document.getElementById('auth-email')?.focus({ preventScroll: true }), 300)
-      setAnnouncement(next === 'register' ? 'Sign-up form shown.' : 'Sign-in form shown.')
+      window.setTimeout(() => document.getElementById('auth-email')?.focus({ preventScroll: true }), 350)
+      setAnnouncement(message ?? (next === 'register' ? 'Sign-up form shown.' : 'Login form shown.'))
     }
   }
 
-  function openPolicy(which: Policy) {
+  function openDialog(which: Policy) {
     return (e: MouseEvent) => {
       e.preventDefault()
+      setMenuOpen(false)
       setPolicy(which)
     }
   }
 
-  return (
-    <div className="landing">
-      <div className="ambient" aria-hidden="true">
-        <span className="glow glow-1" />
-        <span className="glow glow-2" />
-        <span className="glow glow-3" />
-      </div>
+  function closeMenu() {
+    setMenuOpen(false)
+  }
 
-      {/* screen readers hear short updates here (e.g. "Sign-up form shown.") */}
+  // Contact: a real mailto only when an address is configured, otherwise an honest note
+  const contactProps = CONTACT_EMAIL
+    ? { href: `mailto:${CONTACT_EMAIL}`, onClick: closeMenu }
+    : { href: '#contact', onClick: openDialog('contact') }
+
+  const navLinks = (
+    <>
+      <a href="#top" aria-current="page" onClick={closeMenu}>
+        Home
+      </a>
+      <a href="#signin" onClick={openAuth('login', 'Log in to track your complaints.')}>
+        Track Complaint
+      </a>
+      <a href="#how-it-works" onClick={closeMenu}>
+        About
+      </a>
+      <a {...contactProps}>Contact</a>
+    </>
+  )
+
+  return (
+    <div className="landing" id="top">
       <div className="sr-only" aria-live="polite" role="status">
         {announcement}
       </div>
 
       <header className="site-header">
-        <a href="#top" className="brand header-brand" aria-label="CivicSignal home">
-          <Logo size={30} />
-          <span>
-            CivicSignal <span className="brand-sub">Campus</span>
-          </span>
-        </a>
+        <div className="site-header-inner">
+          <a href="#top" className="brand-link" aria-label="CivicSignal home">
+            <Brand />
+          </a>
 
-        <nav className="site-nav" aria-label="Main">
-          <a href="#top" aria-current="page">
-            Home
-          </a>
-          <a href="#how-it-works">How it works</a>
-        </nav>
+          <nav className="site-nav" aria-label="Main">
+            {navLinks}
+          </nav>
 
-        <div className="header-actions">
-          <a href="#signin" className="btn-ghost" onClick={openAuth('login')}>
-            Sign in
+          <a href="#signin" className="btn-coral header-cta" onClick={openAuth('login')}>
+            Login / Sign Up
           </a>
-          <a href="#signup" className="btn-cta" onClick={openAuth('register')}>
-            Get started
-          </a>
+
+          <button
+            type="button"
+            className="menu-btn"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              {menuOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+            </svg>
+          </button>
         </div>
+
+        {menuOpen && (
+          <nav id="mobile-menu" className="mobile-menu" aria-label="Main (mobile)">
+            {navLinks}
+            <a href="#signin" className="btn-coral" onClick={openAuth('login')}>
+              Login / Sign Up
+            </a>
+          </nav>
+        )}
       </header>
 
-      <main id="top">
+      <main>
         <section className="hero" aria-labelledby="hero-title">
+          <CampusIllustration />
+
           <div className="hero-copy">
-            <span className="pill">
-              <span className="pill-dot" aria-hidden="true" />
-              Listening in English, <span lang="hi">हिंदी</span> &amp; Hinglish
-            </span>
-
             <h1 id="hero-title" className="hero-title">
-              <span className="hero-line">Your campus. Your voice.</span>
-              <span className="hero-line">
-                <mark className="hero-accent">Real problems. Real action.</mark>
-              </span>
+              <span className="hero-line">The little things</span>
+              <span className="hero-line">that go wrong</span>
+              <span className="hero-line hero-accent">shouldn’t stay that way.</span>
             </h1>
-
-            <p className="hero-sub">
-              Every campus has problems. Make sure yours don’t go unheard. Share what’s wrong, and let CivicSignal
-              connect your concern to the right team.
-            </p>
-
-            <ul className="chips" aria-label="Highlights">
-              <li>Sorted by AI in seconds</li>
-              <li>Tracked until fixed</li>
-              <li>Anonymous to staff</li>
-            </ul>
-
+            <p className="hero-sub">Report. Track. Resolve — for a more responsive campus.</p>
+            <div className="hero-actions">
+              <a
+                href="#signin"
+                className="btn-mustard"
+                onClick={openAuth('login', 'Log in or sign up to report a complaint.')}
+              >
+                Report a Complaint <span aria-hidden="true">→</span>
+              </a>
+              <a href="#how-it-works" className="btn-text">
+                Learn More
+              </a>
+            </div>
           </div>
 
           <div className="hero-panel">
             <AuthCard mode={mode} onModeChange={setMode} />
           </div>
-          <figure className="demo-card showcase">
-            <span className="stamp" aria-hidden="true">
-              Assigned
-            </span>
-            <figcaption className="demo-label">
-              <span>Example complaint</span>
-              <span className="ticket-no">No. 0042</span>
-            </figcaption>
-            <blockquote className="demo-text">“B block geyser kharab hai, garam paani nahi aa raha”</blockquote>
-            <div className="demo-result">
-              <span className="demo-chip">Water &amp; Plumbing</span>
-              <span className="demo-arrow">AI sorted · Assigned to maintenance</span>
+
+          <figure className="report-card" aria-label="Example complaint">
+            <div className="report-main">
+              <div className="report-head">
+                <svg viewBox="0 0 20 20" className="report-icon" aria-hidden="true">
+                  <path d="M5 2.5h7l3.5 3.5v11.5H5z" />
+                  <path d="M12 2.5V6h3.5M7.5 10h6M7.5 13h6" />
+                </svg>
+                <span className="report-title">Report #CS-2025-1047</span>
+                <span className="pill-sage">Assigned</span>
+                <span className="example-tag">Example</span>
+              </div>
+              <p className="report-category">
+                <svg viewBox="0 0 20 20" className="drop-icon" aria-hidden="true">
+                  <path d="M10 2.5S4.5 9 4.5 12.5a5.5 5.5 0 0 0 11 0C15.5 9 10 2.5 10 2.5z" />
+                </svg>
+                <strong>Category:</strong> Water &amp; Plumbing
+              </p>
+              <ProgressTracker current={2} dates={['Aug 30, 2025', 'Aug 30, 2025']} />
             </div>
-            <ol className="demo-steps" aria-label="Status">
-              <li className="done">Submitted</li>
-              <li className="done current">Assigned</li>
-              <li>In Progress</li>
-              <li>Resolved</li>
-            </ol>
+            <figcaption className="report-aside">
+              <span>Your complaint is currently being looked into by our team.</span>
+              <svg viewBox="0 0 64 64" className="report-art" aria-hidden="true">
+                <path d="M6 44h26v14H6z" className="paper" />
+                <path d="M10 49h18M10 53h12" className="ink" />
+                <circle cx="34" cy="26" r="13" className="glass" />
+                <path d="M28 23h12M28 28h9" className="ink" />
+                <path d="M43.5 35.5l11 11" className="handle" />
+                <path d="M22 9l-3-4M34 6V1M46 9l3-4" className="spark" />
+              </svg>
+            </figcaption>
           </figure>
         </section>
 
         <section id="how-it-works" className="how" aria-labelledby="how-title">
-          <h2 id="how-title">How it works</h2>
+          <h2 id="how-title" className="how-title">
+            How It{' '}
+            <br />
+            Works
+          </h2>
           <ol className="how-grid">
             <li className="how-card">
-              <span className="feature-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z" /></svg>
+              <span className="how-num" aria-hidden="true">
+                1
               </span>
-              <h3>Write it your way</h3>
-              <p>Describe the problem in English, Hindi or Hinglish. Add where it is and how urgent it feels.</p>
+              <div>
+                <svg viewBox="0 0 32 32" className="how-icon" aria-hidden="true">
+                  <path d="M7 4h13l5 5v19H7z" />
+                  <path d="M11 13h10M11 17h7M11 21h5" />
+                  <path d="M17 25l9-9 3 3-9 9h-3z" />
+                </svg>
+                <h3>Report</h3>
+                <p>Share the details of the issue in a few simple steps.</p>
+              </div>
             </li>
             <li className="how-card">
-              <span className="feature-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z" /></svg>
+              <span className="how-num" aria-hidden="true">
+                2
               </span>
-              <h3>Sorted instantly</h3>
-              <p>AI categorises the complaint. If it isn’t sure, a supervisor checks it before anything happens.</p>
+              <div>
+                <svg viewBox="0 0 32 32" className="how-icon" aria-hidden="true">
+                  <circle cx="14" cy="14" r="8.5" />
+                  <path d="M20.5 20.5L28 28" />
+                </svg>
+                <h3>Track</h3>
+                <p>Get status updates on your complaint.</p>
+              </div>
             </li>
             <li className="how-card">
-              <span className="feature-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6" /></svg>
+              <span className="how-num" aria-hidden="true">
+                3
               </span>
-              <h3>Tracked until fixed</h3>
-              <p>Follow every step: Submitted → Assigned → In Progress → Resolved.</p>
+              <div>
+                <svg viewBox="0 0 32 32" className="how-icon" aria-hidden="true">
+                  <circle cx="16" cy="16" r="12" />
+                  <path d="M10.5 16.5l4 4 7-8" />
+                </svg>
+                <h3>Resolve</h3>
+                <p>See the issue resolved — with full transparency.</p>
+              </div>
             </li>
           </ol>
         </section>
       </main>
 
       <footer className="site-footer">
-        <div className="footer-grid">
-          <div className="footer-brand">
-            <a href="#top" className="brand" aria-label="CivicSignal home">
-              <Logo size={28} />
-              <span>CivicSignal</span>
+        <div className="footer-top">
+          <a href="#top" className="brand-link" aria-label="CivicSignal home">
+            <Brand />
+          </a>
+          <nav className="footer-links" aria-label="Footer">
+            <a href="#privacy" onClick={openDialog('privacy')}>
+              Privacy Policy
             </a>
-            <p>
-              CivicSignal turns student complaints into clear, sorted reports for the people who fix them. Powered by
-              a multilingual AI model.
-            </p>
-          </div>
-
-          <nav aria-label="Product">
-            <h3>Product</h3>
-            <ul>
-              <li>
-                <a href="#signup" onClick={openAuth('register')}>
-                  Report a problem
-                </a>
-              </li>
-              <li>
-                <a href="#how-it-works">How it works</a>
-              </li>
-            </ul>
-          </nav>
-
-          <nav aria-label="Account">
-            <h3>Account</h3>
-            <ul>
-              <li>
-                <a href="#signin" onClick={openAuth('login')}>
-                  Sign in
-                </a>
-              </li>
-              <li>
-                <a href="#signup" onClick={openAuth('register')}>
-                  Create an account
-                </a>
-              </li>
-            </ul>
-          </nav>
-
-          <nav aria-label="Legal">
-            <h3>Legal</h3>
-            <ul>
-              <li>
-                <a href="#privacy" onClick={openPolicy('privacy')}>
-                  Privacy Policy
-                </a>
-              </li>
-              <li>
-                <a href="#terms" onClick={openPolicy('terms')}>
-                  Terms of Service
-                </a>
-              </li>
-            </ul>
+            <a href="#terms" onClick={openDialog('terms')}>
+              Terms of Service
+            </a>
+            <a href="#help" onClick={openDialog('help')}>
+              Help
+            </a>
+            <a {...contactProps}>Contact</a>
           </nav>
         </div>
-
         <div className="footer-bottom">
-          <span>© 2026 CivicSignal. Built as a student project.</span>
-          <span>Not an emergency service: contact campus security for emergencies.</span>
+          <span>© 2026 CivicSignal. All rights reserved.</span>
+          <em>A more responsive campus. Together.</em>
         </div>
       </footer>
 

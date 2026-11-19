@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-export type Policy = 'privacy' | 'terms'
+export type Policy = 'privacy' | 'terms' | 'help' | 'contact'
 
 interface Props {
   policy: Policy | null // which one to show; null = closed
@@ -31,11 +31,13 @@ export function PolicyDialog({ policy, onClose }: Props) {
       aria-labelledby="policy-title"
     >
       <div className="policy-body">
-        {policy === 'terms' ? <Terms /> : <Privacy />}
-        <p className="policy-note">
-          Pilot version, written for the CivicSignal student project. It should be reviewed by the university before
-          a full launch.
-        </p>
+        {policy === 'terms' ? <Terms /> : policy === 'help' ? <Help /> : policy === 'contact' ? <Contact /> : <Privacy />}
+        {(policy === 'privacy' || policy === 'terms') && (
+          <p className="policy-note">
+            Pilot version, written for the CivicSignal student project. It should be reviewed by the university
+            before a full launch.
+          </p>
+        )}
         <button type="button" className="primary policy-close" onClick={onClose}>
           Close
         </button>
@@ -69,7 +71,7 @@ function Privacy() {
       </ul>
       <h3>On your device</h3>
       <ul>
-        <li>After you log in, a login token is kept in your browser so you stay logged in. It expires after 24 hours, and logging out removes it.</li>
+        <li>After you log in, your browser keeps a secure session cookie that page scripts cannot read. It ends when you close the browser, or after 30 days if you tick “Remember me”. Logging out removes it.</li>
         <li>The page's fonts are loaded from Google Fonts, so Google can see your IP address when the page loads.</li>
       </ul>
       <h3>Please don't include</h3>
@@ -92,6 +94,49 @@ function Terms() {
         <li>The AI can make mistakes. Supervisors check and correct categories, and a complaint's status is updated by staff, not by the AI.</li>
         <li>Accounts used to misuse the service may be removed.</li>
       </ul>
+    </>
+  )
+}
+
+function Help() {
+  return (
+    <>
+      <h2 id="policy-title" tabIndex={-1}>
+        Help
+      </h2>
+      <h3>Reporting a problem</h3>
+      <ul>
+        <li>Sign up or log in, then describe the problem in English, Hindi or Hinglish.</li>
+        <li>Add where it is and how urgent it feels. The category is chosen for you.</li>
+      </ul>
+      <h3>Tracking it</h3>
+      <ul>
+        <li>After logging in you see all your complaints and the stage each one is at.</li>
+        <li>Status changes when a supervisor updates it: reload the page to see the newest status.</li>
+      </ul>
+      <h3>Can’t log in?</h3>
+      <ul>
+        <li>Password reset is not available yet. Please contact your campus administrator for assistance.</li>
+      </ul>
+      <h3>Emergencies</h3>
+      <ul>
+        <li>CivicSignal is not an emergency service. For fire, medical or security emergencies, contact campus security directly.</li>
+      </ul>
+    </>
+  )
+}
+
+function Contact() {
+  return (
+    <>
+      <h2 id="policy-title" tabIndex={-1}>
+        Contact
+      </h2>
+      <p>
+        A public contact address for CivicSignal hasn’t been published yet. Until then, please speak to your campus
+        administrator.
+      </p>
+      <p>For emergencies, contact campus security directly.</p>
     </>
   )
 }

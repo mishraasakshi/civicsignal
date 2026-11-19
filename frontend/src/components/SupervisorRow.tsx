@@ -46,7 +46,7 @@ export function SupervisorRow({ complaint: c, onUpdated }: Props) {
       <p className="complaint-text">{c.text}</p>
 
       <div className="tags">
-        {c.location && <span className="tag">📍 {c.location}</span>}
+        {c.location && <span className="tag">{c.location}</span>}
         {c.urgency_reported && <span className="tag">Urgency: {URGENCY_LABELS[c.urgency_reported]}</span>}
         {c.needs_review && <span className="tag tag-warn">⚠ Needs review</span>}
       </div>

@@ -1,5 +1,5 @@
 import { useAuth } from './auth/context'
-import { Logo } from './components/Logo'
+import { Brand } from './components/Logo'
 import { Toast } from './components/Toast'
 import { LoginPage } from './pages/LoginPage'
 import { StudentHome } from './pages/StudentHome'
@@ -17,16 +17,13 @@ function App() {
     <div className="app">
       {notice && <Toast message={notice} onClose={clearNotice} />}
       <header className="topbar">
-        <div className="brand small">
-          <Logo size={26} />
-          <span>CivicSignal</span>
-        </div>
+        <Brand size={30} />
         <div className="who">
           <span className={isSupervisor ? 'badge supervisor' : 'badge'}>
             {isSupervisor ? 'Supervisor' : 'Student'}
           </span>
           <span className="email">{user.email}</span>
-          <button type="button" className="ghost" onClick={logout}>
+          <button type="button" className="ghost" onClick={() => void logout()}>
             Log out
           </button>
         </div>

@@ -33,8 +33,9 @@ def verify_password(password: str, hashed: str) -> bool:
 DUMMY_HASH = hash_password("not-a-real-password")
 
 
-def create_access_token(user_id: int, role: str) -> str:
-    expires = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+def create_access_token(user_id: int, role: str, lifetime: timedelta | None = None) -> str:
+    lifetime = lifetime or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expires = datetime.now(UTC) + lifetime
     payload = {"sub": str(user_id), "role": role, "exp": expires}
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 

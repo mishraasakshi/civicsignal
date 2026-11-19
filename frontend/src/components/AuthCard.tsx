@@ -33,17 +33,40 @@ function validate(mode: Mode, email: string, password: string, confirm: string):
   return errors
 }
 
+const MailIcon = () => (
+  <svg viewBox="0 0 20 20" aria-hidden="true" className="field-icon">
+    <rect x="2.5" y="4.5" width="15" height="11" rx="1.5" />
+    <path d="M3 5.5l7 5.5 7-5.5" />
+  </svg>
+)
+
+const LockIcon = () => (
+  <svg viewBox="0 0 20 20" aria-hidden="true" className="field-icon">
+    <rect x="4" y="9" width="12" height="8.5" rx="1.5" />
+    <path d="M6.5 9V6.5a3.5 3.5 0 0 1 7 0V9" />
+  </svg>
+)
+
+const EyeIcon = ({ off }: { off: boolean }) => (
+  <svg viewBox="0 0 20 20" aria-hidden="true">
+    <path d="M2 10s3-5.5 8-5.5S18 10 18 10s-3 5.5-8 5.5S2 10 2 10z" />
+    <circle cx="10" cy="10" r="2.5" />
+    {off && <path d="M3.5 3.5l13 13" />}
+  </svg>
+)
+
 interface Props {
   mode: Mode
   onModeChange: (mode: Mode) => void
 }
 
-/** The login / sign-up form (talks to the real backend through useAuth). */
+/** The login / sign-up card (talks to the real backend through useAuth). */
 export function AuthCard({ mode, onModeChange }: Props) {
   const { login, register } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [remember, setRemember] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -53,14 +76,9 @@ export function AuthCard({ mode, onModeChange }: Props) {
 
   function switchMode(next: Mode) {
     onModeChange(next)
-    setFieldErrors({})
-    setFormError(null)
-    setAlreadyRegistered(false)
-    setShowForgot(false)
-    setConfirm('')
   }
 
-  // When the page switches mode (header buttons), start with a clean form
+  // When the mode changes (tabs or header buttons), start with a clean form
   const [shownMode, setShownMode] = useState(mode)
   if (shownMode !== mode) {
     setShownMode(mode)
@@ -85,7 +103,6 @@ export function AuthCard({ mode, onModeChange }: Props) {
     const errors = validate(mode, email, password, confirm)
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) {
-      // move keyboard focus to the first field with a problem
       const first = (['email', 'password', 'confirm'] as Field[]).find((f) => errors[f])
       document.getElementById(`auth-${first}`)?.focus()
       return
@@ -93,7 +110,7 @@ export function AuthCard({ mode, onModeChange }: Props) {
 
     setBusy(true)
     try {
-      if (mode === 'login') await login(email.trim(), password)
+      if (mode === 'login') await login(email.trim(), password, remember)
       else await register(email.trim(), password)
       // success: the app switches to the logged-in page and shows a success message
     } catch (err) {
@@ -115,54 +132,55 @@ export function AuthCard({ mode, onModeChange }: Props) {
   const isRegister = mode === 'register'
   const pwLongEnough = password.length >= MIN_PASSWORD
   const errId = (f: Field) => `auth-${f}-error`
+  const describedBy = (...ids: (string | false)[]) => ids.filter(Boolean).join(' ') || undefined
 
   return (
     <div className="auth-card" id="auth">
-      <h2 className="auth-title">{isRegister ? 'Create your account' : 'Welcome back'}</h2>
-      <p className="tagline">
-        {isRegister
-          ? 'Students can sign up with their email in seconds.'
-          : 'Log in to report a problem or check on one.'}
-      </p>
+      <h2 className="sr-only">{isRegister ? 'Create a CivicSignal account' : 'Log in to CivicSignal'}</h2>
 
-      <div className="tabs" role="tablist" aria-label="Log in or sign up">
+      <div className="auth-tabs" role="tablist" aria-label="Log in or sign up">
         <button
           type="button"
           role="tab"
           aria-selected={!isRegister}
-          className={!isRegister ? 'tab active' : 'tab'}
+          className={!isRegister ? 'auth-tab active' : 'auth-tab'}
           onClick={() => switchMode('login')}
         >
-          Log in
+          Login
         </button>
         <button
           type="button"
           role="tab"
           aria-selected={isRegister}
-          className={isRegister ? 'tab active' : 'tab'}
+          className={isRegister ? 'auth-tab active' : 'auth-tab'}
           onClick={() => switchMode('register')}
         >
-          Sign up
+          Sign Up
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="form auth-form" noValidate aria-busy={busy}>
+      <form onSubmit={handleSubmit} className="auth-form" noValidate aria-busy={busy}>
         <div className="field">
-          <label htmlFor={`auth-email`}>Email</label>
-          <input
-            id={`auth-email`}
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value)
-              clearError('email')
-            }}
-            placeholder="you@example.com"
-            aria-invalid={!!fieldErrors.email}
-            aria-describedby={fieldErrors.email ? errId('email') : undefined}
-          />
+          <label htmlFor="auth-email" className="sr-only">
+            Email address
+          </label>
+          <div className="input-wrap">
+            <MailIcon />
+            <input
+              id="auth-email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                clearError('email')
+              }}
+              placeholder="Email Address"
+              aria-invalid={!!fieldErrors.email}
+              aria-describedby={describedBy(!!fieldErrors.email && errId('email'))}
+            />
+          </div>
           {fieldErrors.email && (
             <p className="field-error" id={errId('email')}>
               {fieldErrors.email}
@@ -171,23 +189,13 @@ export function AuthCard({ mode, onModeChange }: Props) {
         </div>
 
         <div className="field">
-          <div className="label-row">
-            <label htmlFor={`auth-password`}>Password</label>
-            {!isRegister && (
-              <button
-                type="button"
-                className="text-link"
-                aria-expanded={showForgot}
-                aria-controls={`auth-forgot`}
-                onClick={() => setShowForgot((v) => !v)}
-              >
-                Forgot password?
-              </button>
-            )}
-          </div>
-          <div className="password-box">
+          <label htmlFor="auth-password" className="sr-only">
+            Password
+          </label>
+          <div className="input-wrap">
+            <LockIcon />
             <input
-              id={`auth-password`}
+              id="auth-password"
               type={showPassword ? 'text' : 'password'}
               autoComplete={isRegister ? 'new-password' : 'current-password'}
               value={password}
@@ -195,22 +203,18 @@ export function AuthCard({ mode, onModeChange }: Props) {
                 setPassword(e.target.value)
                 clearError('password')
               }}
-              placeholder={isRegister ? 'At least 8 characters' : 'Your password'}
+              placeholder={isRegister ? 'Password (at least 8 characters)' : 'Password'}
               aria-invalid={!!fieldErrors.password}
-              aria-describedby={
-                [fieldErrors.password ? errId('password') : '', isRegister ? `auth-rules` : '']
-                  .filter(Boolean)
-                  .join(' ') || undefined
-              }
+              aria-describedby={describedBy(!!fieldErrors.password && errId('password'), isRegister && 'auth-rules')}
             />
             <button
               type="button"
-              className="show-btn"
+              className="eye-btn"
               onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               aria-pressed={showPassword}
             >
-              {showPassword ? 'Hide' : 'Show'}
+              <EyeIcon off={!showPassword} />
             </button>
           </div>
           {fieldErrors.password && (
@@ -219,7 +223,7 @@ export function AuthCard({ mode, onModeChange }: Props) {
             </p>
           )}
           {isRegister && (
-            <ul className="pw-rules" id={`auth-rules`}>
+            <ul className="pw-rules" id="auth-rules">
               <li className={pwLongEnough ? 'ok' : ''}>
                 <span aria-hidden="true">{pwLongEnough ? '✓' : '•'}</span> At least {MIN_PASSWORD} characters
               </li>
@@ -230,36 +234,57 @@ export function AuthCard({ mode, onModeChange }: Props) {
           )}
         </div>
 
-        {!isRegister && showForgot && (
-          <div className="info-box" id={`auth-forgot`} role="note">
-            <strong>Password reset isn’t available yet.</strong> CivicSignal can’t send reset emails in this pilot
-            version. If you can’t log in, ask the CivicSignal administrator for help, or create a new account with
-            another email.
-          </div>
-        )}
-
         {isRegister && (
           <div className="field">
-            <label htmlFor={`auth-confirm`}>Confirm password</label>
-            <input
-              id={`auth-confirm`}
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="new-password"
-              value={confirm}
-              onChange={(e) => {
-                setConfirm(e.target.value)
-                clearError('confirm')
-              }}
-              placeholder="Type it again"
-              aria-invalid={!!fieldErrors.confirm}
-              aria-describedby={fieldErrors.confirm ? errId('confirm') : undefined}
-            />
+            <label htmlFor="auth-confirm" className="sr-only">
+              Confirm password
+            </label>
+            <div className="input-wrap">
+              <LockIcon />
+              <input
+                id="auth-confirm"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={confirm}
+                onChange={(e) => {
+                  setConfirm(e.target.value)
+                  clearError('confirm')
+                }}
+                placeholder="Confirm Password"
+                aria-invalid={!!fieldErrors.confirm}
+                aria-describedby={describedBy(!!fieldErrors.confirm && errId('confirm'))}
+              />
+            </div>
             {fieldErrors.confirm && (
               <p className="field-error" id={errId('confirm')}>
                 {fieldErrors.confirm}
               </p>
             )}
           </div>
+        )}
+
+        {!isRegister && (
+          <div className="auth-row">
+            <label className="check">
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+              Remember me
+            </label>
+            <button
+              type="button"
+              className="text-link coral"
+              aria-expanded={showForgot}
+              aria-controls="auth-forgot"
+              onClick={() => setShowForgot((v) => !v)}
+            >
+              Forgot Password?
+            </button>
+          </div>
+        )}
+
+        {!isRegister && showForgot && (
+          <p className="info-box" id="auth-forgot" role="note">
+            Password reset is not available yet. Please contact your campus administrator for assistance.
+          </p>
         )}
 
         {formError && (
@@ -273,23 +298,15 @@ export function AuthCard({ mode, onModeChange }: Props) {
           </p>
         )}
 
-        <button type="submit" className="primary submit-btn" disabled={busy}>
+        <button type="submit" className="btn-outline submit-btn" disabled={busy}>
           {busy && <span className="spinner" aria-hidden="true" />}
-          {busy
-            ? isRegister
-              ? 'Creating your account…'
-              : 'Logging in…'
-            : isRegister
-              ? 'Create student account'
-              : 'Log in'}
+          {busy ? (isRegister ? 'Creating your account…' : 'Logging in…') : isRegister ? 'Create Account' : 'Login'}
         </button>
-      </form>
 
-      {isRegister && (
-        <p className="hint">
-          Sign-up creates a student account. Supervisor accounts are created by the administrator.
-        </p>
-      )}
+        {isRegister && (
+          <p className="hint">Sign-up creates a student account. Supervisor accounts are created by the administrator.</p>
+        )}
+      </form>
     </div>
   )
 }
