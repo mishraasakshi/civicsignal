@@ -5,24 +5,32 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exceptions import RequestValidationError
 from app.core.config import settings
+from app.core.production_checks import enforce
+from app.core.security_headers import SecurityHeadersMiddleware
+
+enforce(settings)  # stop here if production settings are unsafe
+
+# Interactive API docs only in development (or when ENABLE_DOCS=true)
+SHOW_DOCS = settings.ENABLE_DOCS if settings.ENABLE_DOCS is not None else settings.ENVIRONMENT == "development"
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="CivicSignal: AI Complaint-Intelligence Platform for Amity University Lucknow",
     version=settings.VERSION,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    docs_url="/docs" if SHOW_DOCS else None,
+    redoc_url="/redoc" if SHOW_DOCS else None,
+    openapi_url="/openapi.json" if SHOW_DOCS else None,
 )
 
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=True,  # needed for the session cookie
+    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],  # only what the API uses
+    allow_headers=["Content-Type", "Authorization"],
 )
+app.add_middleware(SecurityHeadersMiddleware, https_only=settings.ENVIRONMENT != "development")
 
 # Standardized Error Format: {"error": {"code": str, "message": str}}
 @app.exception_handler(StarletteHTTPException)
@@ -47,15 +55,16 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    # Name the field and the problem, but never echo what was sent (it could be a password)
+    parts = []
+    for err in exc.errors():
+        field = ".".join(str(p) for p in err.get("loc", ()) if p not in ("body", "query", "path"))
+        parts.append(f"{field}: {err.get('msg', 'invalid')}" if field else err.get("msg", "invalid"))
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={
-            "error": {
-                "code": "VALIDATION_ERROR",
-                "message": f"Input validation failed: {exc.errors()}",
-            }
-        },
+        content={"error": {"code": "VALIDATION_ERROR", "message": "Input validation failed: " + "; ".join(parts)}},
     )
+
 
 @app.get("/health", tags=["Health"])
 def health_check():

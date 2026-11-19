@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     VERSION: str = "2.0.0"
     API_V1_STR: str = "/api"
     ENVIRONMENT: str = "development"
+    ENABLE_DOCS: bool | None = None  # /docs on or off; default: only in development
 
     # Security
     JWT_SECRET_KEY: str = Field(default="change-me-to-a-secure-random-secret-key-in-production")
