@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
@@ -15,6 +15,12 @@ class Complaint(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     location: Mapped[str | None] = mapped_column(String(200))
     urgency_reported: Mapped[str | None] = mapped_column(String(10))  # what the student chose
+
+    # Who submitted it. Used only so students can see their own complaints;
+    # it is never shown to supervisors (students can complain without fear).
+    reporter_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
 
     # What the AI suggested when the complaint arrived (kept for measuring the model later)
     predicted_category: Mapped[str] = mapped_column(String(32), nullable=False)

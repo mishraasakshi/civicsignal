@@ -10,7 +10,7 @@ from alembic import context  # noqa: E402
 from sqlalchemy import engine_from_config, pool  # noqa: E402
 
 from app.db.session import Base, database_url  # noqa: E402
-from app.models import complaint  # noqa: E402,F401  (registers the table on Base.metadata)
+from app.models import complaint, user  # noqa: E402,F401  (registers the tables on Base.metadata)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", database_url().replace("%", "%%"))

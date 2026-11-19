@@ -3,6 +3,7 @@
 import numpy as np
 from fastapi.testclient import TestClient
 
+from app.api.deps import get_current_user
 from app.api.similar import index_dependency
 from app.main import app
 from app.ml.similar import SimilarIndex
@@ -26,7 +27,15 @@ FAKE_INDEX = SimilarIndex(
 
 def client() -> TestClient:
     app.dependency_overrides[index_dependency] = lambda: FAKE_INDEX
+    app.dependency_overrides[get_current_user] = lambda: object()  # pretend someone is logged in
     return TestClient(app)
+
+
+def test_requires_login():
+    app.dependency_overrides.clear()
+    app.dependency_overrides[index_dependency] = lambda: FAKE_INDEX
+    assert TestClient(app).post("/api/similar", json={"text": "wifi"}).status_code == 401
+    app.dependency_overrides.clear()
 
 
 def test_best_match_comes_first():

@@ -1,9 +1,11 @@
 """Submit complaints and list them.
 
-POST /api/complaints        - classify with the AI and save
-GET  /api/complaints        - newest first, with optional filters
-GET  /api/complaints/{id}   - one complaint
-PATCH /api/complaints/{id}  - supervisor corrects category and/or moves status
+POST /api/complaints        - any logged-in user: classify with the AI and save
+GET  /api/complaints        - supervisors: all; students: only their own
+GET  /api/complaints/{id}   - supervisors: any; students: only their own
+PATCH /api/complaints/{id}  - supervisors only: correct category and/or move status
+
+The reporter's identity is stored but never returned, so students can complain without fear.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -11,9 +13,11 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.classify import classifier_dependency
+from app.api.deps import get_current_user, require_supervisor
 from app.db.session import get_db
 from app.ml.classifier import ComplaintClassifier
 from app.models.complaint import Complaint
+from app.models.user import User
 from app.schemas.complaint import (
     Category,
     ComplaintCreate,
@@ -32,6 +36,7 @@ def create_complaint(
     body: ComplaintCreate,
     db: Session = Depends(get_db),
     clf: ComplaintClassifier = Depends(classifier_dependency),
+    user: User = Depends(get_current_user),
 ):
     p = clf.predict(body.text)
     complaint = Complaint(
@@ -42,6 +47,7 @@ def create_complaint(
         confidence=p.confidence,
         needs_review=p.needs_review,
         category=p.category,  # starts as the AI's guess; a supervisor can change it later
+        reporter_id=user.id,
     )
     db.add(complaint)
     db.commit()
@@ -57,8 +63,11 @@ def list_complaints(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     query = select(Complaint)
+    if user.role != "supervisor":
+        query = query.where(Complaint.reporter_id == user.id)  # students see only their own
     if category is not None:
         query = query.where(Complaint.category == category)
     if status_ is not None:
@@ -73,15 +82,23 @@ def list_complaints(
 
 
 @router.get("/{complaint_id}", response_model=ComplaintOut)
-def get_complaint(complaint_id: int, db: Session = Depends(get_db)):
+def get_complaint(
+    complaint_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+):
     complaint = db.get(Complaint, complaint_id)
-    if complaint is None:
+    # someone else's complaint looks "not found" to a student (does not reveal that it exists)
+    if complaint is None or (user.role != "supervisor" and complaint.reporter_id != user.id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"complaint {complaint_id} not found")
     return complaint
 
 
 @router.patch("/{complaint_id}", response_model=ComplaintOut)
-def update_complaint(complaint_id: int, body: ComplaintUpdate, db: Session = Depends(get_db)):
+def update_complaint(
+    complaint_id: int,
+    body: ComplaintUpdate,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_supervisor),
+):
     complaint = db.get(Complaint, complaint_id)
     if complaint is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"complaint {complaint_id} not found")
