@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
-# Build a clean folder for the Hugging Face Space (the Space's code is public).
+# Build a clean folder with only what the container needs (this is what gets uploaded to build).
 #
-#   ./scripts/export_space.sh ../civicsignal-space
+#   ./scripts/export_container.sh <output-folder>
 #
 # Includes only what the app needs to run. Never includes: data/, .env files, tests,
 # git history, node_modules, virtual environments, caches.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-OUT="${1:?usage: scripts/export_space.sh <output-folder>}"
+OUT="${1:?usage: scripts/export_container.sh <output-folder>}"
 MODEL=ml/artifacts/embed_minilm.joblib
 [ -f "$MODEL" ] || { echo "Missing $MODEL - run ml/models/train_embed.py first"; exit 1; }
 
 mkdir -p "$OUT"
-# start clean, but keep the Space's own .git folder if this is an existing clone
-find "$OUT" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+# start clean
+find "$OUT" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 
-cp deploy/huggingface/Dockerfile deploy/huggingface/start.sh deploy/huggingface/README.md "$OUT/"
+cp deploy/container/Dockerfile deploy/container/start.sh "$OUT/"
 rsync -a backend/ "$OUT/backend/" \
   --exclude venv --exclude __pycache__ --exclude .pytest_cache --exclude tests \
   --exclude '*.db' --exclude '.env*'
@@ -32,4 +32,4 @@ if grep -rIl --exclude-dir=.git -E 'gsk_[A-Za-z0-9]{20,}|github_pat_|hf_[A-Za-z0
   echo "ERROR: something that looks like an API key was found in $OUT"; exit 1
 fi
 
-echo "Space folder ready: $OUT ($(find "$OUT" -path "$OUT/.git" -prune -o -type f -print | wc -l | tr -d ' ') files)"
+echo "Container folder ready: $OUT ($(find "$OUT" -path "$OUT/.git" -prune -o -type f -print | wc -l | tr -d ' ') files)"

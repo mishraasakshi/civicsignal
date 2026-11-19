@@ -8,4 +8,4 @@ PYTHONPATH=backend python -c "from app.core.config import settings; from app.cor
 python -m alembic -c backend/alembic.ini upgrade head
 # 3) serve the website + API
 exec python -m uvicorn app.main:app --app-dir backend \
-  --host 0.0.0.0 --port "${PORT:-7860}" --no-server-header
+  --host 0.0.0.0 --port "${PORT:-8080}" --no-server-header

@@ -7,7 +7,7 @@ counting TRUSTED_PROXY_HOPS entries from the RIGHT. Entries further left were wr
 the visitor's own browser and can be faked, so they are ignored.
 
 TRUSTED_PROXY_HOPS = 0 (default, local development): use the direct connection's address.
-TRUSTED_PROXY_HOPS = 1: one proxy in front (e.g. Hugging Face Spaces).
+TRUSTED_PROXY_HOPS = 1: one proxy in front (e.g. Azure Container Apps).
 """
 
 from app.core.config import settings

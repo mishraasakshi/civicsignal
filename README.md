@@ -121,7 +121,7 @@ backend/venv/bin/python backend/scripts/check_readonly_role.py
 cd frontend && npm run lint && npm run build                 # frontend checks
 ```
 
-Deployment (Hugging Face Spaces + Neon): see [docs/deployment.md](docs/deployment.md).
+Deployment (Azure Container Apps + Neon): see [docs/deployment.md](docs/deployment.md).
 
 ## Implementation Roadmap Checkpoints
 

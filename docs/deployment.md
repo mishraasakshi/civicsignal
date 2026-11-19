@@ -1,75 +1,94 @@
 # Deployment
 
-CivicSignal runs as **one container** on Hugging Face Spaces (free CPU tier): FastAPI serves
-both the API (`/api/...`) and the built React website (everything else). The database is a
-managed Postgres (Neon, free tier).
+CivicSignal runs as **one container** on **Azure Container Apps**: FastAPI serves both the API
+(`/api/...`) and the built React website (everything else). The database is a managed
+Postgres (**Neon**, free tier).
 
 ```
-Browser ──https──> Hugging Face proxy ──> Space container (FastAPI + website + AI model)
-                                                   └──> Neon Postgres (TLS)
+Browser ──https──> Container Apps ingress ──> container (FastAPI + website + AI model)
+                                                └──> Neon Postgres (TLS, AWS us-east-1)
 ```
 
-Why one container: the login cookie is first-party (no cross-site cookie settings), no CORS,
-and only one proxy sits in front of the app, so `TRUSTED_PROXY_HOPS=1` gives each visitor's
-real IP to the rate limiter.
+Why one container: the login cookie is first-party (no cross-site cookie settings), no CORS
+between site and API, and only one proxy sits in front of the app, so `TRUSTED_PROXY_HOPS=1`
+gives each visitor's real IP to the rate limiter.
 
 ## What goes where
 
 | Where | What | Public? |
 |---|---|---|
 | GitHub repo | Everything (code, tests, docs, ML scripts) except data and `.env` | Yes |
-| Space repo | Only what runs: made by `scripts/export_space.sh` (no tests, no data, no history) | Yes |
-| Space **secrets** | Database URLs, JWT secret | No |
+| Azure Container Registry (private) | Only what runs: made by `scripts/export_container.sh` (no tests, no data, no `.env`) | No |
+| Container Apps secrets | Database URLs, JWT secret | No |
+| `~/.civicsignal/prod-secrets.env` | Local copy of those secrets (file mode 600, outside the repo) | No |
 | Neon | Users, complaints, group summaries | No |
 
 ## 1. Database (Neon)
 
-1. Create a project (region close to your users) and copy the **pooled connection string**.
-   It looks like `postgresql://USER:PASSWORD@HOST/neondb?sslmode=require`.
+1. Create a project (region: AWS us-east-1, next to Azure `eastus`).
 2. In Neon's SQL editor, create the read-only role used by the future NL-to-SQL feature
-   (choose your own strong password):
+   (no password needed here - the next step sets one):
 
    ```sql
-   CREATE ROLE civic_readonly LOGIN PASSWORD '<strong password>';
+   CREATE ROLE civic_readonly LOGIN;
    GRANT CONNECT ON DATABASE neondb TO civic_readonly;
    GRANT USAGE ON SCHEMA public TO civic_readonly;
    ```
 
    Migration 0003 then grants it only the safe complaint columns.
+3. Make the production secrets without ever displaying them. The script asks for the Neon
+   owner connection string with hidden input, gives `civic_readonly` a random password,
+   checks both logins, makes a JWT secret and saves all three to
+   `~/.civicsignal/prod-secrets.env` (mode 600):
 
-## 2. Space secrets
+   ```bash
+   backend/venv/bin/python scripts/make_prod_secrets.py
+   ```
 
-In the Space: **Settings → Variables and secrets → New secret**.
+## 2. Azure (one time)
 
-| Secret | Value |
-|---|---|
-| `DATABASE_URL` | Neon connection string (main user) |
-| `DATABASE_READONLY_URL` | Same host, user `civic_readonly` and its password |
-| `JWT_SECRET_KEY` | 48+ random characters: `python3 -c "import secrets; print(secrets.token_urlsafe(48))"` |
-| `CORS_ORIGINS` | `["https://<owner>-<space>.hf.space"]` |
+1. Activate **Azure for Students** (no credit card; verify with your school email):
+   https://azure.microsoft.com/free/students
+2. Install and sign in to the CLI:
 
-The container refuses to start if any of these are weak or missing (see
-`backend/app/core/production_checks.py`). Migrations run automatically at start-up.
+   ```bash
+   brew install azure-cli
+   az login
+   ```
 
-## 3. Publish the code to the Space
+## 3. Deploy
 
 ```bash
-./scripts/export_space.sh ../civicsignal-space     # clean folder
-cd ../civicsignal-space && git push                 # into the Space's git repo
+./scripts/deploy_azure.sh
 ```
 
-The Space builds the Docker image (about 10 minutes the first time) and starts it.
+The first run creates the resource group `civicsignal-rg`, a private container registry and the
+Container Apps environment, then builds the image in Azure (about 10-15 minutes the first time)
+and starts the app at `https://civicsignal.<environment-domain>.eastus.azurecontainerapps.io`.
+Run the same command again to ship a new version.
+
+The container refuses to start if any secret is weak or missing (see
+`backend/app/core/production_checks.py`) and runs database migrations at start-up.
+
+Settings used: 1 vCPU, 2 GiB memory, 0-1 replicas (scales to zero when idle, never more than
+one replica so the in-memory rate limiter sees every request). The registry is pulled with the
+app's managed identity - no registry password exists.
 
 ## 4. First-time data (run on your own computer, pointed at Neon)
 
 ```bash
-DATABASE_URL='<neon url>' backend/venv/bin/python backend/scripts/create_supervisor.py --email you@example.com
-DATABASE_URL='<neon url>' backend/venv/bin/python backend/scripts/import_group_summaries.py
+./scripts/with_prod_db.sh backend/venv/bin/python backend/scripts/create_supervisor.py --email you@example.com
+./scripts/with_prod_db.sh backend/venv/bin/python backend/scripts/import_group_summaries.py
+./scripts/with_prod_db.sh backend/venv/bin/python backend/scripts/check_readonly_role.py
 ```
 
-## Limits of the free tier
+## Cost and limits
 
-- The Space sleeps after 48 hours without visitors; the first visit then takes about a minute.
-- Rate-limit counts live in memory: one container, reset on restart.
-- Open the app at `https://<owner>-<space>.hf.space` (the app refuses to be shown inside other
-  pages, including the huggingface.co Space page, to prevent clickjacking).
+- Container Apps has a monthly free allowance (CPU, memory and requests) that easily covers a
+  demo. The container registry (Basic) costs about $5 a month, paid from the Azure for Students
+  credit; old images are cleaned up automatically. Without a card on file nothing can be billed.
+- When idle the app scales to zero; the first visit after that takes up to a minute while the
+  container starts and the AI model loads.
+- Logs: `az containerapp logs show -n civicsignal -g civicsignal-rg --follow`.
+- Rate-limit counts live in memory: one instance, reset on restart.
+- The app refuses to be shown inside other pages (clickjacking protection), so open it directly.

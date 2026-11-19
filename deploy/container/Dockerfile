@@ -1,5 +1,5 @@
-# CivicSignal on Hugging Face Spaces: one container serves the website AND the API.
-# Built from the clean folder made by scripts/export_space.sh (no data, no tests, no secrets).
+# CivicSignal: one container serves the website AND the API (deployed on Azure Container Apps).
+# Built from the clean folder made by scripts/export_container.sh (no data, no tests, no secrets).
 
 # ---- 1) build the website ----
 FROM node:22-slim AS web
@@ -19,9 +19,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     ENVIRONMENT=production \
     FRONTEND_DIST=/app/frontend_dist \
     TRUSTED_PROXY_HOPS=1 \
-    PORT=7860
+    PORT=8080
 
-# Spaces run the container as user 1000
+# Run as an unprivileged user, never root
 RUN useradd --create-home --uid 1000 user
 WORKDIR /app
 
@@ -43,5 +43,5 @@ RUN chmod +x /app/start.sh && chown -R user:user /app
 ENV HF_HUB_OFFLINE=1
 USER user
 
-EXPOSE 7860
+EXPOSE 8080
 CMD ["/app/start.sh"]
