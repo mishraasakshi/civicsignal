@@ -81,3 +81,6 @@ app.include_router(classify_router, prefix=settings.API_V1_STR)
 from app.api.similar import router as similar_router  # noqa: E402
 
 app.include_router(similar_router, prefix=settings.API_V1_STR)
+from app.api.complaints import router as complaints_router  # noqa: E402
+
+app.include_router(complaints_router, prefix=settings.API_V1_STR)
