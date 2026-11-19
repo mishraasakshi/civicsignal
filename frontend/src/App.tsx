@@ -1,4 +1,5 @@
 import { useAuth } from './auth/context'
+import { Logo } from './components/Logo'
 import { LoginPage } from './pages/LoginPage'
 import { StudentHome } from './pages/StudentHome'
 import { SupervisorDashboard } from './pages/SupervisorDashboard'
@@ -15,7 +16,7 @@ function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand small">
-          <span className="brand-mark" aria-hidden="true">◉</span>
+          <Logo size={26} />
           <span>CivicSignal</span>
         </div>
         <div className="who">
