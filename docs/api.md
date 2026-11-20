@@ -1,33 +1,50 @@
-# CivicSignal REST API Specifications
+# REST API
 
-All endpoints return JSON responses with standard HTTP status codes.
-Consistent error response format:
+Base path: `/api`. All responses are JSON. Authentication is an httpOnly session cookie set by
+`POST /api/auth/login` (an `Authorization: Bearer` header is also accepted, for the interactive
+docs at `/docs` in development).
+
+Errors always have the same shape:
+
 ```json
-{
-  "error": {
-    "code": "RESOURCE_NOT_FOUND",
-    "message": "Complaint #42 does not exist."
-  }
-}
+{ "error": { "code": "UNAUTHORIZED", "message": "not logged in or token expired" } }
 ```
 
----
+Validation errors (422) list the invalid fields but never echo the submitted values.
 
-## Endpoint Catalog (Section 11)
+## Endpoints
 
-| # | Method | Path | Allowed Role | Purpose |
-| :-: | :--- | :--- | :--- | :--- |
-| 1 | `POST` | `/api/auth/login` | Any | Authenticate and obtain JWT token |
-| 2 | `POST` | `/api/complaints` | `reporter` | Create a complaint (runs extraction + classification) |
-| 3 | `GET` | `/api/complaints` | `reporter`, `supervisor` | List complaints (reporters see only their own; paginated) |
-| 4 | `GET` | `/api/complaints/{id}` | `reporter`, `supervisor` | Fetch complaint details and timeline |
-| 5 | `GET` | `/api/complaints/{id}/similar` | `supervisor` | Ranked possible duplicate matches with explainable reasons |
-| 6 | `PATCH` | `/api/complaints/{id}/status` | `supervisor` | Change status; records an immutable `status_history` event |
-| 7 | `POST` | `/api/ai/classify` | `supervisor` | Classify arbitrary text (testing / sandbox) |
-| 8 | `POST` | `/api/groups` | `supervisor` | Create an issue group from selected complaints |
-| 9 | `PATCH` | `/api/groups/{id}/review` | `supervisor` | Accept or reject suggested group members |
-| 10 | `POST` | `/api/groups/{id}/summary` | `supervisor` | Generate or refresh LLM 1-2 sentence group summary |
-| 11 | `POST` | `/api/assignments` | `supervisor` | Assign a group or complaint to a person/team |
-| 12 | `GET` | `/api/analytics/overview` | `supervisor` | Dashboard aggregates and workload stats |
-| 13 | `GET` | `/api/analytics/hotspots` | `supervisor` | Map-ready DBSCAN geospatial clusters |
-| 14 | `POST` | `/api/analytics/ask` | `supervisor` | Natural language question &rarr; Read-only SQL query + answer |
+| Method | Path | Who | Purpose |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/auth/register` | anyone | Create a student account (rate limited: 10 per IP per hour) |
+| `POST` | `/auth/login` | anyone | Form fields `username` (email), `password`, optional `remember`; sets the session cookie (rate limited per email and per IP) |
+| `POST` | `/auth/logout` | anyone | Clears the session cookie |
+| `GET` | `/auth/me` | logged in | The current user (email, role) |
+| `POST` | `/complaints` | logged in | Submit a complaint: `text`, optional `location`, `urgency` (`low`/`medium`/`high`); returns the AI category, confidence and `needs_review` |
+| `GET` | `/complaints` | logged in | List complaints - students get only their own; filters `category`, `status`, `needs_review`, paging `limit` (max 200) / `offset` |
+| `GET` | `/complaints/{id}` | logged in | One complaint; another student's complaint returns 404 (does not reveal that it exists) |
+| `PATCH` | `/complaints/{id}` | supervisor | Correct the `category` and/or change the `status` (only allowed transitions) |
+| `POST` | `/classify` | anyone | Classify a text without saving it: category, confidence, top 3, `needs_review` |
+| `POST` | `/similar` | supervisor | Most similar stored complaints for a text (`k` 1-20, `min_score` 0-1) |
+| `GET` | `/insights/groups` | supervisor | Repeated-problem groups with AI summaries (503 until summaries are imported) |
+| `GET` | `/health` (no `/api`) | anyone | Liveness check |
+
+## Status workflow
+
+Main path: `Submitted -> Under Review -> Assigned -> In Progress -> Resolved -> Closed`.
+Allowed moves (enforced in `backend/app/services/workflow.py`):
+
+| From | To |
+| :--- | :--- |
+| Submitted | Under Review, Assigned, Needs More Information, Closed |
+| Under Review | Assigned, Needs More Information, Closed |
+| Needs More Information | Under Review, Closed |
+| Assigned | In Progress, Closed |
+| In Progress | Resolved, Assigned |
+| Resolved | Closed, In Progress |
+| Closed | - (final) |
+
+## Categories
+
+`water_plumbing`, `electrical`, `cleanliness`, `internet_wifi`, `furniture`, `mess_food`,
+`security`, `other`.

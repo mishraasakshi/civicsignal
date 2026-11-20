@@ -1,73 +1,90 @@
-# CivicSignal System Architecture
+# Architecture
 
-CivicSignal is an AI-powered public complaint intelligence platform built specifically for university campus facility operations (Amity University Lucknow).
+CivicSignal is a **modular monolith**: one FastAPI process serves the API, the built React
+website and the AI model. Heavy AI work (data generation, training, clustering, LLM summaries)
+runs **offline** on a laptop; its results are imported into the database.
 
----
-
-## 1. High-Level Modular Monolith Diagram
+## Overview
 
 ```mermaid
 flowchart TD
-    subgraph Client ["Client Layer"]
-        R["Student / Reporter\n(React UI / Mobile Web)"]
-        S["Supervisor / Facilities Manager\n(React UI / Desktop)"]
+    subgraph Users
+        ST["Student (browser / phone)"]
+        SV["Supervisor (browser)"]
     end
 
-    subgraph Backend ["FastAPI Modular Monolith"]
-        API["REST API Router (FastAPI)"]
-        AUTH["Auth & Role Guards (JWT, bcrypt)"]
-        
-        subgraph Services ["Service Layer"]
-            CS["Complaint Service"]
-            GS["Issue Group Service"]
-            AS["Analytics Service"]
-        end
-        
-        subgraph ML_Module ["Classical ML Layer"]
-            CLF["Model A: TF-IDF + Logistic Regression"]
-            EMB["Sentence Transformers (Multilingual MiniLM)"]
-            FSS["FAISS Vector Index (Cosine Similarity)"]
-            HOT["Model C: DBSCAN Haversine Clustering"]
-        end
-        
-        subgraph LLM_Module ["Generative AI Layer (Groq + LangChain)"]
-            EXT["Field Extraction\n(Hinglish -> Structured JSON)"]
-            SUM["Issue-Group 1-Line Summarizer"]
-            SQL["Natural Language to SQL Engine"]
-        end
+    subgraph Container ["One container on Azure Container Apps"]
+        WEB["React website (static files)"]
+        API["FastAPI /api/...<br/>auth, complaints, classify, similar, insights"]
+        SEC["Security layer<br/>cookie session, roles, rate limits, headers"]
+        ML["MiniLM embeddings + logistic regression<br/>(loaded at start-up)"]
     end
 
-    subgraph Storage ["Data & Storage Layer"]
-        PG["PostgreSQL 16 (Primary Read-Write)"]
-        RO_PG["PostgreSQL (Read-Only Restricted Role)"]
-        FAISS_DISK["FAISS Index on Disk"]
-        ART["Model Artifacts (/ml/artifacts/)"]
+    subgraph Neon ["Neon PostgreSQL"]
+        APPDB["App role: users, complaints (+ embeddings), group_insights"]
+        RO["civic_readonly role: safe complaint columns only"]
     end
 
-    R -->|HTTPS / REST| API
-    S -->|HTTPS / REST| API
-    API --> AUTH
-    AUTH --> Services
-    
-    Services --> ML_Module
-    Services --> LLM_Module
-    Services --> PG
-    
-    SQL -->|Allow-listed SELECT only| RO_PG
-    EMB --> FSS
-    FSS --> FAISS_DISK
-    CLF --> ART
+    subgraph Offline ["Offline (laptop)"]
+        GEN["Synthetic data (Groq)"]
+        TRAIN["Training + evaluation"]
+        CLUS["DBSCAN groups + LLM summaries (Groq via LangChain)"]
+    end
+
+    ST --> WEB
+    SV --> WEB
+    WEB --> API
+    API --> SEC
+    API --> ML
+    API --> APPDB
+    TRAIN -->|model file| ML
+    CLUS -->|import script| APPDB
+    GEN --> TRAIN
 ```
 
----
+## Submitting a complaint
 
-## 2. Request Lifecycle for Complaint Submission
+1. The student writes a complaint (English, Hindi or Hinglish), optionally with a location and
+   urgency, and submits it. The browser sends the httpOnly session cookie.
+2. `POST /api/complaints` validates the input (Pydantic; validation errors never echo the input).
+3. The text is encoded **once** with the multilingual MiniLM model (384 numbers); the same vector
+   is used to predict the category (logistic regression) and is stored with the complaint for
+   later similarity search.
+4. If the model's confidence is below 50 %, the complaint is flagged `needs_review`.
+5. The complaint is saved with status `Submitted` and the student sees it in their progress
+   tracker.
 
-1. **Intake**: A student submits a complaint in English, informal Hinglish, or with typos.
-2. **Persistence**: The complaint is validated and stored in `complaints` with status `Submitted`.
-3. **Structured Extraction**: The raw text is passed to `backend/app/llm/extraction.py` (Groq API via LangChain) to parse `category_hint`, `location_mention`, `urgency`, and `clean_summary_en`. If Groq is down or times out, the system safely falls back to classical classification.
-4. **Classification**: `backend/app/ml/classifier.py` runs the TF-IDF baseline model to predict the official category and confidence score.
-5. **Vector Embedding & Indexing**: Complaint is converted into a 384-dimensional dense vector via `paraphrase-multilingual-MiniLM-L12-v2` and added to the FAISS index.
-6. **Spatiotemporal Duplicate Ranking**: Nearest neighbours are retrieved from FAISS and ranked using:
-   $$S = w_t \cdot \text{text\_similarity} + w_l \cdot \text{location\_similarity} + w_d \cdot \text{date\_proximity}$$
-7. **Human-in-the-Loop Review**: Supervisors review suggested matches with explainable rationales.
+## Supervisor workflow
+
+- **Needs review / All complaints:** filter by category and status, correct the AI's category,
+  and move a complaint through allowed status changes only (for example `Assigned -> In Progress
+  -> Resolved -> Closed`; `Closed` is final). Invalid jumps are rejected by the server.
+- **Repeated problems:** groups of similar complaints with an AI summary, urgency and suggested
+  action, read from the `group_insights` table.
+- **Similar complaints (API):** cosine similarity over the stored embeddings, supervisor-only.
+
+## Security design
+
+| Concern | Measure |
+| :--- | :--- |
+| Session theft | JWT in an **httpOnly, SameSite=Lax, Secure** cookie; nothing in localStorage |
+| Passwords | bcrypt hashes; "Remember me" = 30-day cookie, otherwise a browser-session cookie |
+| Access control | Students see only their own complaints; supervisor-only endpoints for updates, groups and search |
+| Brute force | 5 failed logins per email per 15 min, 20 logins per IP per minute, 10 sign-ups per IP per hour (429 + Retry-After) |
+| Real client IP | Trusts exactly one proxy hop (`TRUSTED_PROXY_HOPS=1`), so visitors cannot fake their IP |
+| Browser attacks | Content-Security-Policy without inline scripts, HSTS, `frame-ancestors 'none'` |
+| Bad configuration | The app refuses to start in production with a weak or published JWT secret, default database passwords, or a wildcard / non-https CORS origin |
+| Database privilege | `civic_readonly` can read only safe complaint columns (not who reported them, not users); checked in CI by `check_readonly_role.py` |
+| Secrets | Never in git or the image: stored as Container Apps secrets; locally in a mode-600 file outside the repo |
+
+## Why one container
+
+- The website and API share one origin, so the login cookie is first-party: no cross-site
+  cookie settings and no CORS between site and API.
+- Only one proxy sits in front of the app, which keeps client-IP detection for rate limiting
+  trustworthy.
+- One instance (`max-replicas 1`) keeps in-memory rate limits correct and costs stay inside the
+  free allowance; it scales to zero when idle.
+
+See [deployment.md](deployment.md) for hosting details and [DECISIONS.md](DECISIONS.md) for the
+reasoning behind the main choices.

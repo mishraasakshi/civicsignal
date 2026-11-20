@@ -48,7 +48,8 @@ the facilities team:
 - Grouping: 9 groups covering 30 of the 98 real complaints, 83 % purity (share of each group in
   its main category); the other 68 were one-off problems.
 
-All numbers come from the scripts in `ml/models/` and are saved in `ml/artifacts/*_metrics.json`.
+All numbers come from the scripts in `ml/models/` and are saved in `ml/artifacts/*_metrics.json`;
+full details in [docs/evaluation.md](docs/evaluation.md).
 
 ## Architecture
 
@@ -65,7 +66,8 @@ Offline (on a laptop): data generation, training, evaluation, clustering and LLM
 summaries -> results imported into the database with backend/scripts/.
 ```
 
-One container keeps the login cookie first-party (no cross-site cookie settings, no CORS between
+More in [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md) and
+[docs/DECISIONS.md](docs/DECISIONS.md). One container keeps the login cookie first-party (no cross-site cookie settings, no CORS between
 site and API) and keeps hosting free on a student plan.
 
 ## Repository structure
@@ -86,7 +88,7 @@ ml/
   artifacts/      metrics (model files are git-ignored)
 deploy/container/ Dockerfile + start script for production
 scripts/          dev servers, container export, Azure deploy
-docs/             data card, deployment guide, decisions
+docs/             architecture, API, evaluation, data card, deployment, decisions
 ```
 
 ## Run locally
