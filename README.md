@@ -1,103 +1,100 @@
-# CivicSignal — AI-Powered Public Complaint Intelligence
+# CivicSignal — AI campus complaint intelligence
 
-> **Pilot Target:** Amity University Lucknow (Hostels & Campus Facilities)  
-> **Portfolio Reference:** Version 2.0 Architectural Blueprint
+[![CI](https://github.com/mishraasakshi/civicsignal/actions/workflows/ci.yml/badge.svg)](https://github.com/mishraasakshi/civicsignal/actions/workflows/ci.yml)
 
-CivicSignal is an AI-powered complaint intelligence platform designed to turn scattered campus complaints (in English, Romanized Hinglish, and informal student writing) into grouped, reviewable issues. It helps campus facilities staff resolve one root problem instead of managing ten separate tickets, while guaranteeing that **the AI only suggests; a human reviewer always decides**.
+**Live demo:** https://civicsignal.wittycliff-03d73af7.eastasia.azurecontainerapps.io
+<sub>(sleeps when idle - the first visit can take up to a minute to wake up)</sub>
 
----
+Students at Amity University Lucknow report hostel and campus problems the way they talk:
+*"tubelight khrb h"*, *"B block geyser kharab hai, garam paani nahi aa raha"*, *"wifi is dead
+again at night"*. CivicSignal turns those messy, multilingual complaints into a clean queue for
+the facilities team:
 
-## Key Features
+- **Students** submit a complaint and follow it through *Submitted → Under Review → In Progress → Resolved*.
+- **An AI model** reads English, Hindi and Hinglish and suggests one of 8 categories. Unsure
+  predictions (confidence below 50 %) are flagged for a human.
+- **Supervisors** review, re-categorise and update complaints, and see **repeated problems**:
+  groups of similar complaints with an AI-written summary and a suggested next step.
 
-1. **Messy Text & Hinglish Extraction (LLM via Groq API)**
-   - Extracts `category_hint`, `location_mention`, `urgency`, and clean English summaries from raw Hinglish complaints (*"bhai hostel A ke gate pe paani bhar gaya hai"*).
-   - Guardrailed with Pydantic schemas and automatic fallback to classical classification if the LLM is unavailable.
-
-2. **Trained Classical Classifier (Model A)**
-   - TF-IDF baseline (word 1–2-grams + character 3–5-grams) + Logistic Regression / Linear SVM trained across 8 fixed campus categories.
-   - Evaluated on a **real-only test set** collected from Amity students to measure the synthetic-to-real generalization gap.
-
-3. **Semantic Similarity & Duplicate Intelligence (Model B)**
-   - Dense vector embeddings (`paraphrase-multilingual-MiniLM-L12-v2`) with in-process FAISS index.
-   - Spatiotemporal composite ranking score:
-     $$S = w_t \cdot \text{text\_similarity} + w_l \cdot \text{location\_similarity} + w_d \cdot \text{date\_proximity}$$
-   - Explainable rationales (e.g., *"text 0.82 · 40 m apart · 2 days apart"*).
-
-4. **Geospatial Hotspot Detection (Model C)**
-   - Scikit-learn `DBSCAN` with `metric='haversine'` on coordinates in radians, clustering recurring issues on an interactive Leaflet map.
-
-5. **Natural Language Analytics (NL-to-SQL via Groq)**
-   - Translates supervisor questions (*"Which hostel had the most electrical complaints this month?"*) into SQL.
-   - Executed using a **dedicated read-only PostgreSQL role** with AST validation via `sqlglot`, table allow-listing (no `users` table access), row limits, and statement timeouts.
+> The AI only suggests - a person always decides.
 
 ---
 
-## Tech Stack
+## What's inside
 
-| Layer | Tool | Purpose |
-| :--- | :--- | :--- |
-| **Backend** | Python 3.11, FastAPI, Pydantic v2 | Typed asynchronous REST APIs |
-| **Database** | PostgreSQL 16, SQLAlchemy 2.x, Alembic | Relational storage & schema migrations |
-| **Classical ML** | Scikit-learn, Pandas, NumPy | Category classification & DBSCAN clustering |
-| **Vector Search** | Sentence-Transformers, FAISS (`faiss-cpu`) | Multilingual embeddings & nearest-neighbour search |
-| **LLM Orchestration** | Groq API via LangChain (`langchain-groq`) | High-speed field extraction & NL-to-SQL |
-| **Frontend** | React, Vite, TypeScript, Tailwind CSS, Leaflet | Modern responsive student & supervisor workspace |
-| **Testing** | Pytest, FastAPI TestClient, Vitest, Playwright | Comprehensive unit, API, and E2E coverage |
+| Area | What was built |
+| :--- | :--- |
+| **Data** | 1,416 synthetic complaints generated with LLMs on Groq (8 categories; English, Hinglish, short, typo-heavy styles), plus a **real test set of 98 anonymous student complaints** collected with a Google Form and never used for training ([data card](docs/data_card.md)) |
+| **Classifier** | Multilingual sentence embeddings (`paraphrase-multilingual-MiniLM-L12-v2`) + logistic regression, chosen over a TF-IDF baseline because it generalises better to real student writing |
+| **Repeated problems** | DBSCAN clustering on the embeddings groups similar complaints; an LLM (via LangChain + Groq) writes a validated JSON summary per group (title, urgency, suggested action) |
+| **Similar-complaint search** | Embeddings stored per complaint; cosine search API for supervisors (finds Hinglish matches for English queries) |
+| **Backend** | FastAPI, SQLAlchemy 2, Alembic migrations, PostgreSQL 16, 11 REST endpoints |
+| **Frontend** | React 19, Vite, TypeScript; student page, supervisor dashboard, progress tracker |
+| **Security** | httpOnly session cookie (no tokens in browser storage), bcrypt, role-based access, login and sign-up rate limits, strict security headers (CSP, HSTS, no framing), a least-privilege read-only database role, start-up checks that refuse weak production secrets |
+| **Quality** | 74 backend tests (pytest) + 25 frontend tests (Vitest); GitHub Actions runs lint, formatting, tests, a real-Postgres migration and a permission check on every push |
+| **Deployment** | One container (website + API + AI model) on **Azure Container Apps**, scale-to-zero; managed Postgres on **Neon** ([deployment guide](docs/deployment.md)) |
 
----
+## Results (real student complaints)
 
-## Repository Structure
+| Model | Synthetic validation | Real, genuine (58) | All real (98) |
+| :--- | :---: | :---: | :---: |
+| TF-IDF + logistic regression (baseline) | 96.8 % | 55.2 % | 67.3 % |
+| **Multilingual MiniLM + logistic regression (deployed)** | 95.8 % | **65.5 %** | **76.5 %** |
+| Human agreement (students vs. our labelling rules) | - | 84.5 % | - |
 
-```text
-civicsignal/
-├── frontend/                # React + Vite + TypeScript UI
-├── backend/
-│   ├── app/
-│   │   ├── api/             # FastAPI route controllers
-│   │   ├── core/            # Config, security, dependencies
-│   │   ├── models/          # SQLAlchemy ORM models
-│   │   ├── schemas/         # Pydantic v2 validation schemas
-│   │   ├── services/        # Business logic (complaints, groups, analytics)
-│   │   ├── ml/              # Model loaders (classifier, embeddings, FAISS, DBSCAN)
-│   │   ├── llm/             # Prompts, extraction, summaries, NL-to-SQL
-│   │   └── db/              # Database session & seeders
-│   ├── alembic/             # Schema migration scripts
-│   ├── tests/               # Backend pytest suite
-│   ├── Dockerfile
-│   └── requirements.txt
-├── ml/
-│   ├── data_gen/            # Synthetic Hinglish complaint generator (Groq)
-│   ├── data_prep/           # Dataset cleaning & reproducible splitting
-│   ├── train_classifier.py  # Model A baseline & embedding training
-│   ├── evaluate_classifier.py # Macro F1, precision/recall, confusion matrix
-│   ├── build_index.py       # FAISS index builder
-│   ├── hotspots.py          # DBSCAN geospatial clustering
-│   └── artifacts/           # Model weights & indices (gitignored)
-├── data/
-│   ├── DATA_CARD.md         # Data card documenting sources & categories
-│   ├── raw/                 # Raw complaints
-│   ├── processed/           # Train / Val splits
-│   └── real/                # Real student complaints template & test set
-├── docs/
-│   ├── architecture.md      # System architecture & lifecycle diagram
-│   ├── api.md               # 14 REST endpoint contracts
-│   ├── evaluation.md        # Reproducible model benchmark logs
-│   └── DECISIONS.md         # Architecture Decision Records (ADRs) for interviews
-├── scripts/                 # Setup, seed, and maintenance scripts
-├── .github/workflows/ci.yml # GitHub Actions CI pipeline
-├── docker-compose.yml       # Local PostgreSQL 16 + Backend container setup
-├── .env.example             # Configuration template
-└── README.md
+- Accuracy on synthetic data looks excellent, but real student writing is much harder. Measuring
+  this **synthetic-to-real gap** honestly drove the switch from TF-IDF to multilingual embeddings
+  (+10 points on genuine complaints).
+- Grouping: 9 groups covering 30 of the 98 real complaints, 83 % purity (share of each group in
+  its main category); the other 68 were one-off problems.
+
+All numbers come from the scripts in `ml/models/` and are saved in `ml/artifacts/*_metrics.json`.
+
+## Architecture
+
+```
+Browser ──https──> Azure Container Apps ──> one container
+                                             ├─ FastAPI: /api/...  (auth, complaints, AI)
+                                             ├─ React website (built, served by FastAPI)
+                                             └─ MiniLM model + classifier (loaded at start)
+                                                      │
+                                                      └──TLS──> Neon PostgreSQL
+                                                                 (app role + read-only role)
+
+Offline (on a laptop): data generation, training, evaluation, clustering and LLM group
+summaries -> results imported into the database with backend/scripts/.
 ```
 
----
+One container keeps the login cookie first-party (no cross-site cookie settings, no CORS between
+site and API) and keeps hosting free on a student plan.
 
-## Run Locally
+## Repository structure
+
+```text
+backend/
+  app/api/        REST endpoints (auth, classify, complaints, similar, insights)
+  app/core/       config, security, rate limiting, security headers, production checks
+  app/ml/         classifier + similar-complaint search
+  app/models/     SQLAlchemy models        app/schemas/  Pydantic schemas
+  alembic/        database migrations      scripts/      admin and data-import scripts
+  tests/          pytest suite
+frontend/src/     React app (pages, components, tests)
+ml/
+  data_gen/       synthetic complaint generator (Groq)
+  data_prep/      real test-set cleaning
+  models/         training, evaluation, clustering, LLM summaries
+  artifacts/      metrics (model files are git-ignored)
+deploy/container/ Dockerfile + start script for production
+scripts/          dev servers, container export, Azure deploy
+docs/             data card, deployment guide, decisions
+```
+
+## Run locally
 
 You need three things running, each in its own terminal tab:
 
 ```bash
-docker compose up -d db          # 1. Postgres (once; keeps running in the background)
+docker compose up -d db          # 1. Postgres (keeps running in the background)
 ./scripts/dev_backend.sh         # 2. API on http://localhost:8000 (docs: /docs)
 ./scripts/dev_frontend.sh        # 3. Website on http://localhost:5173
 ```
@@ -118,20 +115,22 @@ Checks:
 ```bash
 backend/venv/bin/python -m pytest backend -q                 # backend tests
 backend/venv/bin/python backend/scripts/check_readonly_role.py
-cd frontend && npm run lint && npm run build                 # frontend checks
+cd frontend && npm run lint && npm test && npm run build     # frontend checks
 ```
 
-Deployment (Azure Container Apps + Neon): see [docs/deployment.md](docs/deployment.md).
+## Privacy
 
-## Implementation Roadmap Checkpoints
+Real survey responses stay on the developer's machine and are git-ignored; names and room
+numbers were removed before evaluation. The repository and the deployed container contain no
+student data.
 
-- [x] **Phase 0 — Setup**: Repository scaffolding, docker-compose, pre-commit config, CI workflow, baseline tests.
-- [ ] **Phase 1 — Data**: Synthetic Hinglish generator (Groq), de-duplication, dataset splits, data card.
-- [ ] **Phase 2 — Classifier**: TF-IDF + Logistic Regression/SVM baseline vs embeddings, evaluation on real test set.
-- [ ] **Phase 3 — Similarity & Hotspots**: Multilingual embeddings, FAISS index, composite scoring, DBSCAN.
-- [ ] **Phase 4 — LLM Features**: Hinglish field extraction, issue-group summaries, NL-to-SQL with guardrails.
-- [ ] **Phase 5 — Backend**: SQLAlchemy models, Alembic migrations, JWT auth, 14 REST endpoints, seed data.
-- [ ] **Phase 6 — Frontend**: React + Vite + TypeScript interface with Leaflet maps and supervisor workspace.
-- [ ] **Phase 7 — End-to-End Testing**: Section 17 demo scenario verification and security hardening.
-- [ ] **Phase 8 — Deployment**: Render + Vercel deployment with read-only DB role.
-- [ ] **Phase 9 — Portfolio Polish**: Demo video guide, pilot metrics script, and resume writeup.
+## Roadmap
+
+- [x] Synthetic + real data, data card
+- [x] Classifier (TF-IDF baseline vs. multilingual embeddings), evaluation on real complaints
+- [x] Similar-complaint search and repeated-problem groups with LLM summaries
+- [x] Backend, frontend, security hardening, tests, CI
+- [x] Deployment on Azure Container Apps + Neon
+- [ ] Plain-English analytics for supervisors (NL-to-SQL on the read-only role)
+- [ ] Extracting location and urgency from Hinglish text with an LLM
+- [ ] Email-based password reset
